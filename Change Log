@@ -1,0 +1,13 @@
+## Change Log ##
+
+# v1.0.0 - 2018/03/13
+#  initial release
+#
+#  includes features from original as well as:
+#  - Uses cp for initial sync because it is quicker than rsync and has the added bonus (at least in my testing) of creating smaller sparse files than rsync does.
+#  - Keeps one copy of each vdisk to offset risk of using --inplace with rsync.
+#  - Uses rsync for syncing changes to backups.
+#  - Corrected some logging errors.
+#  - Temporarily disabled keeping backups for a set number of days.
+#  - Changed default check from 60 seconds to 30 seconds and doubled number of allowed failures.
+#  - VMs are now started after backup if they were running before the backup was started.
