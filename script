@@ -56,6 +56,8 @@ me=`basename "$0"`
 #  - allow override of vm_original_state.
 #  - move xml backup to pre vm shutdown.
 #  - look into effectiveness of compression on sparse files. add option to enable if it is.
+#  - add option to run hash compare on copied files for the paranoid.
+#  - add option to choose copy methodology such as "rsync only", "cp only", "dd", "no delta sync", etc.
 
 ##################################################### change these variables ###################################################
 
