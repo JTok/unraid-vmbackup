@@ -7,6 +7,7 @@ Currently the script is kind of a work in progress, and not all features are imp
 
 I will flesh this readme out with instructions and functionality as more features are added.
 
+I do not make any guarantees as to the function of this script. It is provided as-is.
 
 
 
