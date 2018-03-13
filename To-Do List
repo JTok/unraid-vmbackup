@@ -1,0 +1,11 @@
+## To-Do List ##
+#  - add ability to list vdisks that should be skipped by path (similar to how listing guests works).
+#  - figure out how to handle the time-stamp variable.
+#  - option to keep a set number of backups.
+#  - option to turn off backup cleaning (especially important if just rolling a set number of backups).
+#  - move variables to top for easier input.
+#  - allow override of vm_original_state.
+#  - move xml backup to pre vm shutdown.
+#  - look into effectiveness of compression on sparse files. add option to enable if it is.
+#  - add option to run hash compare on copied files for the paranoid.
+#  - add option to choose copy methodology such as "rsync only", "cp only", "dd", "no delta sync", etc.
