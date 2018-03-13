@@ -33,31 +33,6 @@ me=`basename "$0"`
 # this script does not yet run using variables passed from the cli as yet but there is intention to do so if there is interest.
 # for now the variables below are what are needed to be ammended to have the script run.
 
-## Change Log ##
-
-# v1.0.0 - 2018/03/13
-#  initial release
-#
-#  includes features from original as well as:
-#  - Uses cp for initial sync because it is quicker than rsync and has the added bonus (at least in my testing) of creating smaller sparse files than rsync does.
-#  - Keeps one copy of each vdisk to offset risk of using --inplace with rsync.
-#  - Uses rsync for syncing changes to backups.
-#  - Corrected some logging errors.
-#  - Temporarily disabled keeping backups for a set number of days.
-#  - Changed default check from 60 seconds to 30 seconds and doubled number of allowed failures.
-#  - VMs are now started after backup if they were running before the backup was started.
-
-## To-Do List ##
-#  - add ability to list vdisks that should be skipped by path (similar to how listing guests works).
-#  - figure out how to handle the time-stamp variable.
-#  - option to keep a set number of backups.
-#  - option to turn off backup cleaning (especially important if just rolling a set number of backups).
-#  - move variables to top for easier input.
-#  - allow override of vm_original_state.
-#  - move xml backup to pre vm shutdown.
-#  - look into effectiveness of compression on sparse files. add option to enable if it is.
-#  - add option to run hash compare on copied files for the paranoid.
-#  - add option to choose copy methodology such as "rsync only", "cp only", "dd", "no delta sync", etc.
 
 ##################################################### change these variables ###################################################
 
