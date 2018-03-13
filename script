@@ -29,9 +29,7 @@ enabled="1"
 me=`basename "$0"`
 
 
-# this script has been created to automate the backup of unRAID vm's vdisks(s) to a specified location.
-# this script does not yet run using variables passed from the cli as yet but there is intention to do so if there is interest.
-# for now the variables below are what are needed to be ammended to have the script run.
+# this script copies unRAID vm's vdisks and their configurations to a specified location.
 
 
 ##################################################### change these variables ###################################################
