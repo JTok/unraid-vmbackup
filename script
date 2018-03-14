@@ -47,6 +47,12 @@ kill_vm_if_cant_shutdown="0"
 # default is 1. set this to 0 if you do not want a vm to be started if it was running before the backup started. Paused VMs will be left stopped.
 set_vm_to_original_state="1"
 
+# default is 0. set this to the number of days backups should be kept. 0 means indefinitely.
+number_of_days_to_keep_backups="0"
+
+# default is 0. set this to the number of backups that should be kept. 0 means infinitely.
+number_of_backups_to_keep="0"
+
 
 #### advanced variables ####
 
@@ -204,6 +210,74 @@ if [[ "$set_vm_to_original_state" =~ ^(0|1)$ ]]; then
 else
 
 	echo "failure: set_vm_to_original_state is $set_vm_to_original_state. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to how many days backups should be kept. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$number_of_days_to_keep_backups" =~ ^[0-9]+$ ]]; then
+
+	if [ "$number_of_days_to_keep_backups" -lt 7 ]; then
+
+		if [ "$number_of_days_to_keep_backups" -eq 0 ]; then
+
+			echo "information: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. backups will be kept indefinitely. be sure to set number_of_backups_to_keep to keep backups storage usage down."
+
+		else
+
+			echo "warning: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is potentially an insufficient number of days to keep your backups."
+
+		fi
+
+	elif [ "$number_of_days_to_keep_backups" -gt 180 ]; then
+
+		echo "warning: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is a long time to keep your backups."
+
+	elif [ "$number_of_days_to_keep_backups" -ge 5 -a "$number_of_days_to_keep_backups" -le 180 ]; then
+
+		echo "information: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is probably a sufficient number of days to keep your backups."
+
+	fi
+
+else
+
+	echo "failure: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to how many backups should be kept. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$number_of_backups_to_keep" =~ ^[0-9]+$ ]]; then
+
+	if [ "$number_of_backups_to_keep" -lt 2 ]; then
+
+		if [ "$number_of_backups_to_keep" -eq 0 ]; then
+
+			echo "information: number_of_backups_to_keep is $number_of_backups_to_keep. an infinite number of backups will be kept. be sure to set number_of_days_to_keep_backups to keep backups storage usage down."
+
+		else
+
+			echo "warning: number_of_backups_to_keep is $number_of_backups_to_keep. this is potentially an insufficient number of backups to keep."
+
+		fi
+
+	elif [ "$number_of_backups_to_keep" -gt 40 ]; then
+
+		echo "warning: number_of_backups_to_keep is $number_of_backups_to_keep. this is a lot of backups to keep."
+
+	elif [ "$number_of_backups_to_keep" -ge 2 -a "$number_of_backups_to_keep" -le 40 ]; then
+
+		echo "information: number_of_backups_to_keep is $number_of_backups_to_keep. this is probably a sufficient number of backups to keep."
+
+	fi
+
+else
+
+	echo "failure: number_of_backups_to_keep is $number_of_backups_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
 
 	exit 1
 
@@ -859,20 +933,32 @@ do
 	echo "information: backup of "$vm" to $backup_location/$vm completed."
 
 
-	# echo "information: cleaning out backups older than 2 days in location ONLY if newer files exist	" $backup_location/$vm/
+	# check to see how many days backups should be kept.
+	if [ $number_of_days_to_keep_backups -eq 0 ]; then
+	
+		echo "information: nubmer of days to keep backups set to indefinitely."
 
-	# for j in $backup_location/$vm/
+	else
 
-	# do
+		echo "information: cleaning out backups older than $number_of_days_to_keep_backups days in location ONLY if newer files exist in " $backup_location/$vm/
 
-	#   if [[ -n $(find "$j" -type f -mtime -3) ]]; then
-	#     #echo "debug: valid criteria to enter loop"
-	#     find "$j" -type f -mtime +2 -exec rm -f {} \;
-	#   fi
+		# create variable equal to number_of_days_to_keep_backups plus one to make sure that their are files younger than the cutoff date.
+		days_plus_1=$(($number_of_days_to_keep_backups + 1))
 
-	#   #echo "debug: ended if sequence after loop"
 
-	# done
+		for j in $backup_location/$vm/
+
+		do
+
+			if [[ -n $(find "$j" -type f -mtime -$days_plus_1) ]]; then
+				
+				find "$j" -type f -mtime +$number_of_days_to_keep_backups -exec rm -f {} \;
+
+			fi
+
+		done
+
+	fi
 
 done
 
