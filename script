@@ -18,7 +18,7 @@ me=`basename "$0"`
 
 # this script copies unRAID vm's vdisks and their configurations to a specified location.
 
-##################################################### script variables #########################################################
+################################################## script variables start ######################################################
 
 # default 0 but set the master switch to 1 if you want to enable the script otherwise it will not run.
 enabled="0"
@@ -30,6 +30,12 @@ backup_location="/mnt/user/share/backup_folder/"
 vms_to_backup="
 vm1
 vm2
+"
+
+# list of specific vdisks to be skipped. use the full path.
+vdisks_to_skip="
+/mnt/user/domains/vm1/vdisk2.img
+/mnt/user/domains/vm1/vdisk3.img
 "
 
 # default is 0 but set this to 1 if you would like to actually copy and backup files.
@@ -54,10 +60,10 @@ start_vm_after_backup="0"
 start_vm_after_failure="0"
 
 
-#################################################### end of variables ###########################################################
+################################################## script variables end #########################################################
 
 
-##################################################### script start #############################################################
+###################################################### script start #############################################################
 
 # check the name of the script is as it should be. if yes, continue. if no, exit.
 if [ "$me" == "$official_script_name" ]; then
@@ -297,6 +303,8 @@ echo "information: started attempt to backup "$vms_to_backup" to $backup_locatio
 # set this to force the for loop to split on new lines and not spaces.
 IFS=$'\n'
 
+# remove the trailing slash from backup_location if it exists.
+backup_location=${backup_location%/}
 
 # loop through the vms in the list and try and back up thier associated xml configurations and vdisk(s).
 for vm in $vms_to_backup
@@ -378,6 +386,15 @@ do
 	do
 
 		if [ ! "$disk" == "Source" ]; then
+
+			# check to see if disk should be skipped.
+			if [[ "$vdisks_to_skip" =~ "$disk" ]]; then
+			
+				echo "information: $disk for $vm was found in vdisks_to_skip. skipping disk."
+
+				continue
+
+			fi
 
 			# get the filename of the disk without the path.
 			new_disk=$(basename $disk)
@@ -761,10 +778,7 @@ echo "information: finished attempt to backup "$vms_to_backup" to $backup_locati
 exit 0
 
 
-# end of script
-
-
-################################################### dont edit above here #######################################################
+######################################################### script end ###########################################################
 
 # Originally from unraid-autovmbackup by Daniel Jackson (danioj)
 # Includes additions for removing old backups added by Deeks
