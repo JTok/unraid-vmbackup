@@ -38,17 +38,8 @@ vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk3.img
 "
 
-# default is 0. set this to 1 if you would like to actually copy and backup files.
-actually_copy_files="0"
-
 # default is 0. set this to 1 if you would like to add a timestamp to the backed up files.
 timestamp_files="0"
-
-# default is 20. set this to the number of times you would like to check if a clean shutdown of a vm has been successfull.
-clean_shutdown_checks="20"
-
-# default is 30. set this to the number of seconds to wait in between checks to see if a clean shutdown has been successfull.
-seconds_to_wait="30"
 
 # default is 0. set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
 kill_vm_if_cant_shutdown="0"
@@ -56,12 +47,29 @@ kill_vm_if_cant_shutdown="0"
 # default is 1. set this to 0 if you do not want a vm to be started if it was running before the backup started. Paused VMs will be left stopped.
 set_vm_to_original_state="1"
 
+
+#### advanced variables ####
+
+# default is 1. set to 0 if you would like to skip backing up xml configuration files.
+backup_xml="1"
+
+# default is 1. set to 0 if you would like to skip backing up vdisks.
+backup_vdisks="1"
+
 # default is 0. set this to 1 if you would like to start a vm after it has successfully been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_backup="0"
 
 # default is 0. set this to 1 if you would like to start a vm after it has failed to have been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_failure="0"
 
+# default is 1. set this to 0 if you would like to perform a dry-run backup. *CURRENTLY BROKEN*
+actually_copy_files="1"
+
+# default is 20. set this to the number of times you would like to check if a clean shutdown of a vm has been successfull.
+clean_shutdown_checks="20"
+
+# default is 30. set this to the number of seconds to wait in between checks to see if a clean shutdown has been successfull.
+seconds_to_wait="30"
 
 ################################################## script variables end #########################################################
 
@@ -133,6 +141,163 @@ else
 fi
 
 
+# check to see if backups should have timestamp. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$timestamp_files" =~ ^(0|1)$ ]]; then
+
+	if [ "$timestamp_files" -eq 0 ]; then
+
+		echo "information: timestamp_files is $timestamp_files. timestamp will not be added to backup files."
+
+	elif  [ "$timestamp_files" -eq 1 ]; then
+
+		echo "information: timestamp_files is $timestamp_files. timestamp will be added to backup files."
+
+		# create a variable which is only used in rsync commands
+		timestamp=`date '+%Y%m%d_%H%M%p'`"_"
+
+	fi
+
+else
+
+	echo "failure: timestamp_files is $timestamp_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to see if vm should be killed if clean shutdown fails. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$kill_vm_if_cant_shutdown" =~ ^(0|1)$ ]]; then
+
+	if [ "$kill_vm_if_cant_shutdown" -eq 0 ]; then
+
+		echo "warning: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. vms will not be forced to shutdown if a clean shutdown can not be detected."
+
+	elif [ "$kill_vm_if_cant_shutdown" -eq 1 ]; then
+
+		echo "information: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. vms will be forced to shutdown if a clean shutdown can not be detected."
+
+	fi
+
+else
+
+	echo "failure: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to see if vm should be set to original state after backup. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$set_vm_to_original_state" =~ ^(0|1)$ ]]; then
+
+	if [ "$set_vm_to_original_state" -eq 0 ]; then
+
+		echo "warning: set_vm_to_original_state is $set_vm_to_original_state. vms will not be set to their original state after backup."
+
+	elif [ "$set_vm_to_original_state" -eq 1 ]; then
+
+		echo "information: set_vm_to_original_state is $set_vm_to_original_state. vms will be set to their original state after backup."
+
+	fi
+
+else
+
+	echo "failure: set_vm_to_original_state is $set_vm_to_original_state. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to see if xml should be backed up. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$backup_xml" =~ ^(0|1)$ ]]; then
+
+	if [ "$backup_xml" -eq 0 ]; then
+
+		echo "warning: backup_xml is $backup_xml. vms will not have their xml configurations backed up."
+
+	elif [ "$backup_xml" -eq 1 ]; then
+
+		echo "information: backup_xml is $backup_xml. vms will have their xml configurations backed up."
+
+	fi
+
+else
+
+	echo "failure: backup_xml is $backup_xml. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to see if vdisks should be backed up. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$backup_vdisks" =~ ^(0|1)$ ]]; then
+
+	if [ "$backup_vdisks" -eq 0 ]; then
+
+		echo "warning: backup_vdisks is $backup_vdisks. vms will not have their vdisks backed up."
+
+	elif [ "$backup_vdisks" -eq 1 ]; then
+
+		echo "information: backup_vdisks is $backup_vdisks. vms will have their vdisks backed up."
+
+	fi
+
+else
+
+	echo "failure: backup_vdisks is $backup_vdisks. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to see if vms should be started after a successfull backup. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$start_vm_after_backup" =~ ^(0|1)$ ]]; then
+
+	if [ "$start_vm_after_backup" -eq 0 ]; then
+
+		echo "warning: start_vm_after_backup is $start_vm_after_backup. vms will not be started following successfull backup."
+
+	elif [ "$start_vm_after_backup" -eq 1 ]; then
+
+		echo "information: start_vm_after_backup is $start_vm_after_backup vms will be started following a successfull backup."
+
+	fi
+
+else
+
+	echo "failure: start_vm_after_backup is $start_vm_after_backup. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to see if vms should be started after an unsuccessfull backup. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$start_vm_after_failure" =~ ^(0|1)$ ]]; then
+
+	if [ "$start_vm_after_failure" -eq 0 ]; then
+
+		echo "warning: start_vm_after_failure is $start_vm_after_failure. vms will not be started following an unsuccessfull backup."
+
+	elif [ "$start_vm_after_failure" -eq 1 ]; then
+
+		echo "information: start_vm_after_failure is $start_vm_after_failure. vms will be started following an unsuccessfull backup."
+
+	fi
+
+else
+
+	echo "failure: start_vm_after_failure is $start_vm_after_failure. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
 # validate the actually_copy_files option. if yes the rsync command line option for dry-run. if input invalid, exit.
 if [[ "$actually_copy_files" =~ ^(0|1)$ ]]; then
 
@@ -158,32 +323,7 @@ else
 fi
 
 
-# check to see if i should add a timestamp to backed up files or not. if yes, continue if no, continue. if input invalid, exit.
-if [[ "$timestamp_files" =~ ^(0|1)$ ]]; then
-
-	if [ "$timestamp_files" -eq 0 ]; then
-
-		echo "information: timestamp_files is $timestamp_files. timestamp will not be added to backup files."
-
-	elif  [ "$timestamp_files" -eq 1 ]; then
-
-		echo "information: timestamp_files is $timestamp_files. timestamp will be added to backup files."
-
-		# create a variable which is only used in rsync commands
-		timestamp=`date '+%Y%m%d_%H%M%p'`"_"
-
-	fi
-
-else
-
-	echo "failure: timestamp_files is $timestamp_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
-
-	exit 1
-
-fi
-
-
-# check to see how many times i should check for vm shutdown. if yes, continue if no, continue if input invalid, exit.
+# check to see how many times vm's state should be checked for shutdown. if yes, continue if no, continue if input invalid, exit.
 if [[ "$clean_shutdown_checks" =~ ^[0-9]+$ ]]; then
 
 	if [ "$clean_shutdown_checks" -lt 5 ]; then
@@ -209,7 +349,7 @@ else
 fi
 
 
-# check to see how long i should wait between checks for vm shutdown. messages to user only. if input invalid, exit.
+# check to see how many seconds to wait between vm shutdown checks. messages to user only. if input invalid, exit.
 if [[ "$seconds_to_wait" =~ ^[0-9]+$ ]]; then
 
 	if [ "$seconds_to_wait" -lt 60 ]; then
@@ -234,71 +374,6 @@ else
 
 fi
 
-
-# check to see if i should force kill the vm if i cant do a clean shutdown. if yes, continue if no, continue. if input invalid, exit.
-if [[ "$kill_vm_if_cant_shutdown" =~ ^(0|1)$ ]]; then
-
-	if [ "$kill_vm_if_cant_shutdown" -eq 0 ]; then
-
-		echo "warning: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. vms will not be forced to shutdown if a clean shutdown can not be detected."
-
-	elif [ "$actually_copy_files" -eq 1 ]; then
-
-		echo "information: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. vms will be forced to shutdown if a clean shutdown can not be detected."
-
-	fi
-
-else
-
-	echo "failure: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
-
-	exit 1
-
-fi
-
-
-# check to see if i should start vms after a successfull backup. if yes, continue if no, continue. if input invalid, exit.
-if [[ "$start_vm_after_backup" =~ ^(0|1)$ ]]; then
-
-	if [ "$start_vm_after_backup" -eq 0 ]; then
-
-		echo "warning: start_vm_after_backup is $start_vm_after_backup. vms will not be started following successfull backup."
-
-	elif [ "$actually_copy_files" -eq 1 ]; then
-
-		echo "information: start_vm_after_backup is $start_vm_after_backup vms will be started following a successfull backup."
-
-	fi
-
-else
-
-	echo "failure: start_vm_after_backup is $start_vm_after_backup. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
-
-	exit 1
-
-fi
-
-
-# check to see if i should start vms after an unsuccessfull backup. if yes, continue if no, continue. if input invalid, exit.
-if [[ "$start_vm_after_failure" =~ ^(0|1)$ ]]; then
-
-	if [ "$start_vm_after_failure" -eq 0 ]; then
-
-		echo "warning: start_vm_after_failure is $start_vm_after_failure. vms will not be started following an unsuccessfull backup."
-
-	elif [ "$actually_copy_files" -eq 1 ]; then
-
-		echo "information: start_vm_after_failure is $start_vm_after_failure. vms will be started following an unsuccessfull backup."
-
-	fi
-
-else
-
-	echo "failure: start_vm_after_failure is $start_vm_after_failure. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
-
-	exit 1
-
-fi
 
 echo "information: started attempt to backup "$vms_to_backup" to $backup_location"
 
@@ -371,88 +446,98 @@ do
 	fi
 
 
-	# get the list of the vdisks associated with the vm and address them one by one.
-	vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
+	# see if xml files should be backed up.
+	if [ "$backup_xml" -eq 1 ]; then
 
+		# check to see if xml file has already been backed up and make a copy.
+		if [ -f "$backup_location/$vm/$timestamp$vm.xml" ]; then
 
-	# check for the header in vdisks to see if there are any disks
-	if [ "$vdisks" == "Source" ]; then
+			rsync -av$rsync_dry_run_option "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$vm.xml.bak"
 
-		echo "warning: there are no vdisk(s) associated with $vm to backup."
-
+		fi
+		
 	fi
 
 
-	# get vdisk names to check on current backups
-	for disk in $vdisks
+	# see if vdisks should be backed up.
+	if [ "$backup_vdisks" -eq 1 ]; then
 
-	do
-
-		if [ ! "$disk" == "Source" ]; then
-
-			# check to see if disk should be skipped.
-			if [[ "$vdisks_to_skip" =~ "$disk" ]]; then
-			
-				echo "information: $disk for $vm was found in vdisks_to_skip. skipping disk."
-
-				continue
-
-			fi
-
-			# get the filename of the disk without the path.
-			new_disk=$(basename $disk)
-
-			# check the extension of the disk to ensure only .img disks are coppied.
-			if [ ! "${disk##*.}" == "img" ]; then
-			# CHANGE here to include qcow2 images
-			# Do not use in conjunction with quemu-img conversion
-			#if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
-
-				echo "warning: $disk of $vm is not a vdisk. skipping."
-
-				continue
-
-			fi
+		# get the list of the vdisks associated with the vm and address them one by one.
+		vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
 
 
-			# check to see if xml file has already been backed up and make a copy.
-			if [ -f "$backup_location/$vm/$timestamp$vm.xml" ]; then
+		# check for the header in vdisks to see if there are any disks
+		if [ "$vdisks" == "Source" ]; then
 
-				rsync -av$rsync_dry_run_option "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$vm.xml.bak"
+			echo "warning: there are no vdisk(s) associated with $vm to backup."
 
-			fi
+		fi
 
-			# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
-			if [ -f "$backup_location/$vm/$timestamp$new_disk" ]; then
 
-				# check to see if a copy of the vdisk backup already exists and use cp or rsync depending on result.
-				if [ ! -f "$backup_location/$vm/$timestamp$new_disk.bak" ]; then
+		# get vdisk names to check on current backups
+		for disk in $vdisks
 
-					cp -av --sparse=always "$backup_location/$vm/$timestamp$new_disk" "$backup_location/$vm/$timestamp$new_disk.bak"
+		do
+
+			if [ ! "$disk" == "Source" ]; then
+
+				# check to see if disk should be skipped.
+				if [[ "$vdisks_to_skip" =~ "$disk" ]]; then
+				
+					echo "information: $disk for $vm was found in vdisks_to_skip. skipping disk."
+
+					continue
+
+				fi
+
+				# get the filename of the disk without the path.
+				new_disk=$(basename $disk)
+
+				# check the extension of the disk to ensure only .img disks are coppied.
+				if [ ! "${disk##*.}" == "img" ]; then
+				# CHANGE here to include qcow2 images
+				# Do not use in conjunction with quemu-img conversion
+				#if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
+
+					echo "warning: $disk of $vm is not a vdisk. skipping."
+
+					continue
+
+				fi
+
+
+				# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
+				if [ -f "$backup_location/$vm/$timestamp$new_disk" ]; then
+
+					# check to see if a copy of the vdisk backup already exists and use cp or rsync depending on result.
+					if [ ! -f "$backup_location/$vm/$timestamp$new_disk.bak" ]; then
+
+						cp -av --sparse=always "$backup_location/$vm/$timestamp$new_disk" "$backup_location/$vm/$timestamp$new_disk.bak"
+
+					else
+
+						rsync -av$rsync_dry_run_option --inplace --no-whole-file "$backup_location/$vm/$timestamp$new_disk" "$backup_location/$vm/$timestamp$new_disk.bak"
+
+					fi
+
+				fi
+
+
+				# send a message to the user based on whether there was an actual copy or a dry-run.
+				if [ "$actually_copy_files" -eq 0 ]; then
+
+					echo "information: dry-run copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk.bak complete."
 
 				else
 
-					rsync -av$rsync_dry_run_option --inplace --no-whole-file "$backup_location/$vm/$timestamp$new_disk" "$backup_location/$vm/$timestamp$new_disk.bak"
+					echo "information: copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk.bak complete."
 
 				fi
 
 			fi
 
-
-			# send a message to the user based on whether there was an actual copy or a dry-run.
-			if [ "$actually_copy_files" -eq 0 ]; then
-
-				echo "information: dry-run copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk.bak complete."
-
-			else
-
-				echo "information: copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk.bak complete."
-
-			fi
-
-		fi
-
-	done
+		done
+	fi
 
 
 	# get the state of the vm for making sure it is off before backing up.
@@ -606,98 +691,110 @@ do
 
 		echo "action: can_backup_vm flag is $can_backup_vm. starting backup of $vm xml configuration and vdisk(s)."
 
-		# dump the vm xml configuration locally first.
-		virsh dumpxml "$vm" > "$vm.xml"
+		# see if xml should be backed up.
+		if [ "$backup_xml" -eq 1 ]; then
 
-		echo "action: actually_copy_files is $actually_copy_files."
-		
-		# copy or pretend to copy the vdisk to the backup location specified by the user.
-		rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
+			# dump the vm xml configuration locally first.
+			virsh dumpxml "$vm" > "$vm.xml"
 
-		# delete the local copy of the xml configuration.
-		rm "$vm.xml"
+			echo "action: actually_copy_files is $actually_copy_files."
 
-		# send a message to the user based on whether there was an actual copy or a dry-run.
-		if [ "$actually_copy_files" -eq 0 ]; then
+			# copy or pretend to copy the vdisk to the backup location specified by the user.
+			rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
 
-			echo "information: dry-run backup of $vm xml configuration to $backup_location/$vm/$timestamp$vm.xml complete."
+			# delete the local copy of the xml configuration.
+			rm "$vm.xml"
 
-		else
+			# send a message to the user based on whether there was an actual copy or a dry-run.
+			if [ "$actually_copy_files" -eq 0 ]; then
 
-			echo "information: backup of $vm xml configuration to $backup_location/$vm/$timestamp$vm.xml complete."
+				echo "information: dry-run backup of $vm xml configuration to $backup_location/$vm/$timestamp$vm.xml complete."
 
+			else
+
+				echo "information: backup of $vm xml configuration to $backup_location/$vm/$timestamp$vm.xml complete."
+
+			fi
+			
 		fi
 
 
-		# get the list of the vdisks associated with the vm and address them one by one.
-		vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
+		# see if vdisks should be backed up.
+		if [ "$backup_vdisks" -eq 1 ]; then
+
+			# get the list of the vdisks associated with the vm and address them one by one.
+			vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
 
 
-		# check for the header in vdisks to see if there are any disks
-		if [ "$vdisks" == "Source" ]; then
+			# check for the header in vdisks to see if there are any disks
+			if [ "$vdisks" == "Source" ]; then
 
-			echo "warning: there are no vdisk(s) associated with $vm to backup."
-
-		fi
-
-
-		for disk in $vdisks
-
-		do
-
-			if [ ! "$disk" == "Source" ]; then
-
-
-				# get the filename of the disk without the path.
-				new_disk=$(basename $disk)
-
-				# check the extension of the disk to ensure only .img disks are coppied.
-				if [ ! "${disk##*.}" == "img" ]; then
-				# CHANGE here to include qcow2 images
-				# Do not use in conjunction with quemu-img conversion
-				#if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
-
-					echo "warning: $disk of $vm is not a vdisk. skipping."
-
-					continue
-
-				fi
-
-				echo "action: actually_copy_files is $actually_copy_files."
-
-				# copy or pretend to copy the vdisk to the backup location specified by the user.
-
-				#	Choose either plain rsync or rsync + zip. Note that the dryrun will throw a few odds
-				#	when running since the zip won't be created.
-				#
-				#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk"
-				#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk" && zip -j "$backup_location/$vm/$timestamp$vm".zip "$backup_location/$vm/$timestamp"* && rm "$backup_location/$vm/$timestamp"*.img "$backup_location/$vm/$timestamp"*.xml
-				#	cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
-
-				if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
-
-					cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
-
-				else
-
-					rsync -av$rsync_dry_run_option --inplace --no-whole-file "$disk" "$backup_location/$vm/$timestamp$new_disk"
-
-				fi
-
-				# send a message to the user based on whether there was an actual copy or a dry-run.
-				if [ "$actually_copy_files" -eq 0 ]; then
-
-					echo "information: dry-run backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
-
-				else
-
-					echo "information: backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
-
-				fi
+				echo "warning: there are no vdisk(s) associated with $vm to backup."
 
 			fi
 
-		done
+
+			for disk in $vdisks
+
+			do
+
+				if [ ! "$disk" == "Source" ]; then
+
+
+					# get the filename of the disk without the path.
+					new_disk=$(basename $disk)
+
+					# check the extension of the disk to ensure only .img disks are coppied.
+					if [ ! "${disk##*.}" == "img" ]; then
+					# CHANGE here to include qcow2 images
+					# Do not use in conjunction with quemu-img conversion
+					#if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
+
+						echo "warning: $disk of $vm is not a vdisk. skipping."
+
+						continue
+
+					fi
+
+					echo "action: actually_copy_files is $actually_copy_files."
+
+
+					# copy or pretend to copy the vdisk to the backup location specified by the user.
+
+					#	Choose either plain rsync or rsync + zip. Note that the dryrun will throw a few odds
+					#	when running since the zip won't be created.
+					#
+					#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk"
+					#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk" && zip -j "$backup_location/$vm/$timestamp$vm".zip "$backup_location/$vm/$timestamp"* && rm "$backup_location/$vm/$timestamp"*.img "$backup_location/$vm/$timestamp"*.xml
+					#	cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+					if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
+
+						cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+					else
+
+						rsync -av$rsync_dry_run_option --inplace --no-whole-file "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+					fi
+
+					# send a message to the user based on whether there was an actual copy or a dry-run.
+					if [ "$actually_copy_files" -eq 0 ]; then
+
+						echo "information: dry-run backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+
+					else
+
+						echo "information: backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+
+					fi
+
+
+				fi
+
+			done
+
+		fi
 
 
 		# check to see if set_vm_to_original_state is 1 and then check the vm's original state.

@@ -19,3 +19,4 @@
 #  - added ability to specify specific vdisks to be skipped.
 #  - vm_original_state can be overridden.
 #  - making a copy of original xml happens before vm shutdown.
+#  - xml and/or vdisk backups can be skipped.
