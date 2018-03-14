@@ -2,7 +2,6 @@
 #  - figure out how to handle the time-stamp variable.
 #  - option to keep a set number of backups.
 #  - option to turn off backup cleaning (especially important if just rolling a set number of backups).
-#  - allow override of vm_original_state.
 #  - move xml backup to pre vm shutdown.
 #  - look into effectiveness of compression on sparse files. add option to enable if it is.
 #  - add option to run hash compare on copied files for the paranoid.

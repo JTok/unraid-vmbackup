@@ -38,10 +38,10 @@ vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk3.img
 "
 
-# default is 0 but set this to 1 if you would like to actually copy and backup files.
+# default is 0. set this to 1 if you would like to actually copy and backup files.
 actually_copy_files="0"
 
-# default is 0 but set this to 1 if you would like to add a timestamp to the backed up files.
+# default is 0. set this to 1 if you would like to add a timestamp to the backed up files.
 timestamp_files="0"
 
 # default is 20. set this to the number of times you would like to check if a clean shutdown of a vm has been successfull.
@@ -50,13 +50,16 @@ clean_shutdown_checks="20"
 # default is 30. set this to the number of seconds to wait in between checks to see if a clean shutdown has been successfull.
 seconds_to_wait="30"
 
-# default is 0 but set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
+# default is 0. set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
 kill_vm_if_cant_shutdown="0"
 
-# default is 0 but set this to 1 if you would like to start a vm after it has successfully been backed up.
+# default is 1. set this to 0 if you do not want a vm to be started if it was running before the backup started. Paused VMs will be left stopped.
+set_vm_to_original_state="1"
+
+# default is 0. set this to 1 if you would like to start a vm after it has successfully been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_backup="0"
 
-# default is 0 but set this to 1 if you would like to start a vm after it has failed to have been backed up.
+# default is 0. set this to 1 if you would like to start a vm after it has failed to have been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_failure="0"
 
 
@@ -697,17 +700,20 @@ do
 		done
 
 
-		# start the vm after backup based on previous state.
-		if [ "$vm_original_state" == "running" ]; then
-			echo "action: vm_original_state is $vm_original_state. starting $vm."
+		# check to see if set_vm_to_original_state is 1 and then check the vm's original state.
+		if [ "$set_vm_to_original_state" -eq 1 ]; then
+			# start the vm after backup based on previous state.
+			if [ "$vm_original_state" == "running" ]; then
+				echo "action: vm_original_state is $vm_original_state. starting $vm."
 
-			# start vm
-			virsh start "$vm"
+				# start vm
+				virsh start "$vm"
 
-		else
+			else
 
-			echo "information: vm_original_state is $vm_original_state. not starting $vm."
+				echo "information: vm_original_state is $vm_original_state. not starting $vm."
 
+			fi
 		fi
 
 
