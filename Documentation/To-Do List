@@ -1,6 +1,6 @@
 ## To-Do List ##
 #  - figure out how to handle the time-stamp variable.
-#  - option to keep a set number of backups.
 #  - look into effectiveness of compression on sparse files. add option to enable if it is.
 #  - add option to run hash compare on copied files for the paranoid.
 #  - add option to choose copy methodology such as "rsync only", "cp only", "dd", "no delta sync", etc.
+#  - figure out what to do with dry-runs.

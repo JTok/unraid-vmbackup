@@ -18,6 +18,9 @@
 #  - moved variables closer to the top to make them easier to access.
 #  - added ability to specify specific vdisks to be skipped.
 #  - vm_original_state can be overridden.
-#  - making a copy of original xml happens before vm shutdown.
 #  - xml and/or vdisk backups can be skipped.
 #  - created variable to set number of days to keep backups.
+#  - support for img and qcow2 files.
+#  - made xml backups more efficient.
+#  - can now set the number of backups to be kept.
+#  - changed from mtime to mmin for more accurate cleaning.
