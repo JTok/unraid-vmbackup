@@ -415,6 +415,13 @@ do
 			fi
 
 
+			# check to see if xml file has already been backed up and make a copy.
+			if [ -f "$backup_location/$vm/$timestamp$vm.xml" ]; then
+
+				rsync -av$rsync_dry_run_option "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$vm.xml.bak"
+
+			fi
+
 			# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
 			if [ -f "$backup_location/$vm/$timestamp$new_disk" ]; then
 
@@ -603,14 +610,7 @@ do
 		virsh dumpxml "$vm" > "$vm.xml"
 
 		echo "action: actually_copy_files is $actually_copy_files."
-
-		# check to see if xml file has already been backed up and make a copy
-		if [ -f "$backup_location/$vm/$timestamp$vm.xml" ]; then
-
-			rsync -av$rsync_dry_run_option "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$vm.xml.bak"
-
-		fi
-
+		
 		# copy or pretend to copy the vdisk to the backup location specified by the user.
 		rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
 
