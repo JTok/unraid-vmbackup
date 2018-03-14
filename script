@@ -38,9 +38,6 @@ vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk3.img
 "
 
-# default is 0. set this to 1 if you would like to add a timestamp to the backed up files.
-timestamp_files="0"
-
 # default is 0. set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
 kill_vm_if_cant_shutdown="0"
 
@@ -52,6 +49,9 @@ number_of_days_to_keep_backups="0"
 
 # default is 0. set this to the number of backups that should be kept. 0 means infinitely.
 number_of_backups_to_keep="0"
+
+# default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
+timestamp_files="1"
 
 
 #### advanced variables ####
@@ -141,34 +141,6 @@ if [ -d "$backup_location" ]; then
 else
 
 	echo "failure: backup_location is $backup_location. this location does not exist. exiting."
-
-	exit 1
-
-fi
-
-
-# create timestamp variable for rolling backups.
-rolling_backup_timestamp=`date '+%Y%m%d_%H%M'`"_"
-
-# check to see if backups should have timestamp. if yes, continue if no, continue. if input invalid, exit.
-if [[ "$timestamp_files" =~ ^(0|1)$ ]]; then
-
-	if [ "$timestamp_files" -eq 0 ]; then
-
-		echo "information: timestamp_files is $timestamp_files. timestamp will not be added to backup files."
-
-	elif  [ "$timestamp_files" -eq 1 ]; then
-
-		echo "information: timestamp_files is $timestamp_files. timestamp will be added to backup files."
-
-		# create a timestamp for file names
-		timestamp=$rolling_backup_timestamp
-
-	fi
-
-else
-
-	echo "failure: timestamp_files is $timestamp_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
 
 	exit 1
 
@@ -286,6 +258,33 @@ else
 
 fi
 
+
+# create timestamp variable for rolling backups.
+timestamp=`date '+%Y%m%d_%H%M'`"_"
+
+# check to see if backups should have timestamp. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$timestamp_files" =~ ^(0|1)$ ]]; then
+
+	if [ "$timestamp_files" -eq 0 ]; then
+
+		echo "information: timestamp_files is $timestamp_files. this variable is only used when number_of_backups_to_keep is set to 1. timestamp will not be added to backup files."
+
+	elif  [ "$timestamp_files" -eq 1 ]; then
+
+		echo "information: timestamp_files is $timestamp_files. timestamp will be added to backup files."
+
+	fi
+
+else
+
+	echo "failure: timestamp_files is $timestamp_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+#### advanced variables ####
 
 # check to see if xml should be backed up. if yes, continue if no, continue. if input invalid, exit.
 if [[ "$backup_xml" =~ ^(0|1)$ ]]; then
@@ -461,6 +460,7 @@ IFS=$'\n'
 # remove the trailing slash from backup_location if it exists.
 backup_location=${backup_location%/}
 
+
 # loop through the vms in the list and try and back up thier associated xml configurations and vdisk(s).
 for vm in $vms_to_backup
 
@@ -524,7 +524,7 @@ do
 
 
 	# see if vdisks should be backed up.
-	if [ "$backup_vdisks" -eq 1 ]; then
+	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ]; then
 
 		# get the list of the vdisks associated with the vm and address them one by one.
 		vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
@@ -575,18 +575,18 @@ do
 				# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
 				if [ -f "$newest_vdisk_file" ]; then
 
-					cp -av --sparse=always "$newest_vdisk_file" "$backup_location/$vm/$rolling_backup_timestamp$new_disk"
+					cp -av --sparse=always "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
 
 				fi
 
 				# send a message to the user based on whether there was an actual copy or a dry-run.
 				if [ "$actually_copy_files" -eq 0 ]; then
 
-					echo "information: dry-run copy of backup of $new_disk vdisk to $backup_location/$vm/$rolling_backup_timestamp$new_disk.bak complete."
+					echo "information: dry-run copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
 
 				else
 
-					echo "information: copy of backup of $new_disk vdisk to $backup_location/$vm/$rolling_backup_timestamp$new_disk.bak complete."
+					echo "information: copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
 
 				fi
 
@@ -752,8 +752,18 @@ do
 
 			echo "action: actually_copy_files is $actually_copy_files."
 
-			# copy or pretend to copy the xml configuration to the backup location specified by the user.
-			rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$rolling_backup_timestamp$vm.xml"
+			# check if only one non-timestamped backup is being kept. if so, perform rsync without a timestamp. if not, continue as normal.
+			if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+			
+				# copy or pretend to copy the xml configuration to the backup location specified by the user.
+				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
+
+			else
+			
+				# copy or pretend to copy the xml configuration to the backup location specified by the user.
+				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
+
+			fi
 
 			# delete the local copy of the xml configuration.
 			rm "$vm.xml"
@@ -761,11 +771,11 @@ do
 			# send a message to the user based on whether there was an actual copy or a dry-run.
 			if [ "$actually_copy_files" -eq 0 ]; then
 
-				echo "information: dry-run backup of $vm xml configuration to $backup_location/$vm/$rolling_backup_timestamp$vm.xml complete."
+				echo "information: dry-run backup of $vm xml configuration to $backup_location/$vm/$timestamp$vm.xml complete."
 
 			else
 
-				echo "information: backup of $vm xml configuration to $backup_location/$vm/$rolling_backup_timestamp$vm.xml complete."
+				echo "information: backup of $vm xml configuration to $backup_location/$vm/$timestamp$vm.xml complete."
 
 			fi
 			
@@ -821,13 +831,23 @@ do
 					#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk" && zip -j "$backup_location/$vm/$timestamp$vm".zip "$backup_location/$vm/$timestamp"* && rm "$backup_location/$vm/$timestamp"*.img "$backup_location/$vm/$timestamp"*.xml
 					#	cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
 
-					if [ ! -f "$backup_location/$vm/$rolling_backup_timestamp$new_disk" ]; then
+					# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
+					if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 
-						cp -av --sparse=always "$disk" "$backup_location/$vm/$rolling_backup_timestamp$new_disk"
+						cp -av --sparse=always "$disk" "$backup_location/$vm/$new_disk"
 
 					else
 
-						rsync -av$rsync_dry_run_option --inplace --no-whole-file "$disk" "$backup_location/$vm/$rolling_backup_timestamp$new_disk"
+						# check to see if an existing backup was already copied. if so, use rsync. if not, use cp.
+						if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
+
+							cp -afv --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+						else
+
+							rsync -av$rsync_dry_run_option --inplace --no-whole-file "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+						fi
 
 					fi
 
