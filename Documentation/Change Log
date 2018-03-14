@@ -25,3 +25,4 @@
 #  - can now set the number of backups to be kept.
 #  - changed from mtime to mmin for more accurate cleaning.
 #  - timestamps are always used exept when the number of backups being kept is equal to 1.
+#  - added ability to compress backups.

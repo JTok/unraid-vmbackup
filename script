@@ -50,6 +50,9 @@ number_of_days_to_keep_backups="0"
 # default is 0. set this to the number of backups that should be kept. 0 means infinitely.
 number_of_backups_to_keep="0"
 
+# default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
+compress_backups="0"
+
 # default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
 timestamp_files="1"
 
@@ -68,7 +71,7 @@ start_vm_after_backup="0"
 # default is 0. set this to 1 if you would like to start a vm after it has failed to have been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_failure="0"
 
-# default is 1. set this to 0 if you would like to perform a dry-run backup. *CURRENTLY BROKEN*
+# *CURRENTLY UNUSED* default is 1. set this to 0 if you would like to perform a dry-run backup.
 actually_copy_files="1"
 
 # default is 20. set this to the number of times you would like to check if a clean shutdown of a vm has been successfull.
@@ -253,6 +256,28 @@ if [[ "$number_of_backups_to_keep" =~ ^[0-9]+$ ]]; then
 else
 
 	echo "failure: number_of_backups_to_keep is $number_of_backups_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+
+	exit 1
+
+fi
+
+
+# check to see if backups should be compressed. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$compress_backups" =~ ^(0|1)$ ]]; then
+
+	if [ "$compress_backups" -eq 0 ]; then
+
+		echo "information: compress_backups is $compress_backups. backups will not be compressed."
+
+	elif [ "$compress_backups" -eq 1 ]; then
+
+		echo "information: compress_backups is $compress_backups. backups will be compressed."
+
+	fi
+
+else
+
+	echo "failure: compress_backups is $compress_backups. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
 
 	exit 1
 
@@ -827,25 +852,39 @@ do
 					#	Choose either plain rsync or rsync + zip. Note that the dryrun will throw a few odds
 					#	when running since the zip won't be created.
 					#
-					#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk"
 					#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk" && zip -j "$backup_location/$vm/$timestamp$vm".zip "$backup_location/$vm/$timestamp"* && rm "$backup_location/$vm/$timestamp"*.img "$backup_location/$vm/$timestamp"*.xml
-					#	cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
 
 					# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
 					if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 
-						cp -av --sparse=always "$disk" "$backup_location/$vm/$new_disk"
+						cp -afv --sparse=always "$disk" "$backup_location/$vm/$new_disk"
 
 					else
 
 						# check to see if an existing backup was already copied. if so, use rsync. if not, use cp.
 						if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
 
-							cp -afv --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
+							cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
 
 						else
 
 							rsync -av$rsync_dry_run_option --inplace --no-whole-file "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+						fi
+
+					fi
+
+					# check to see if backup files should be compressed.
+					if [ "$compress_backups" -eq 1 ]; then
+
+						# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
+						if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+						
+							tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/$vm.xml" "$backup_location/$vm/$new_disk" && rm "$backup_location/$vm/$vm.xml" "$backup_location/$vm/$new_disk"
+
+						else
+						
+							tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$new_disk" && rm "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$new_disk"
 
 						fi
 
@@ -931,7 +970,6 @@ do
 
 	echo "information: backup of "$vm" to $backup_location/$vm completed."
 
-
 	# check to see how many days backups should be kept.
 	if [ $number_of_days_to_keep_backups -eq 0 ]; then
 	
@@ -960,6 +998,12 @@ do
 
 			fi
 
+			if [[ -n $(find "$j" -type f \( -name "*.tar.gz" \) -mmin -$(($days_plus_1*24*60))) ]]; then
+				
+				find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -f {} \;
+
+			fi
+
 		done
 
 	fi
@@ -981,10 +1025,13 @@ do
 		#ls -tp | grep -v '/$' | tail -n +6 | tr '\n' '\0' | xargs -0 rm --
 		
 		# remove xml files that are over the limit.
-		ls -tp /mnt/user/Backups/autovmbackups/miner/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
+		ls -tp $backup_location/$vm/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
 
 		# remove image files that are over the limit.
-		ls -tp /mnt/user/Backups/autovmbackups/miner/*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
+		ls -tp $backup_location/$vm/*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
+
+		# remove tar.gz files that are over the limit.
+		ls -tp $backup_location/$vm/*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
 
 	fi
 
