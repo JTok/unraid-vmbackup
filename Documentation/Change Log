@@ -11,3 +11,8 @@
 #  - Temporarily disabled keeping backups for a set number of days.
 #  - Changed default check from 60 seconds to 30 seconds and doubled number of allowed failures.
 #  - VMs are now started after backup if they were running before the backup was started.
+
+# v1.0.1 - 2018/03/14
+#  for the queen
+#
+#  - moved variables closer to the top to make them easier to access
