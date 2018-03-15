@@ -1,2 +1,3 @@
 # unraid-vmbackup
+# v1.1.0
 a script for backing up VMs in unraid including vdisks and configuration files.
