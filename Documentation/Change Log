@@ -27,3 +27,4 @@
 #  - timestamps are always used exept when the number of backups being kept is equal to 1.
 #  - added ability to compress backups.
 #  - added option to compare backups and retry once on failure.
+#  - updated disclaimer.
