@@ -1,4 +1,4 @@
 ## To-Do List ##
 #  - add option to choose copy methodology such as "rsync only", "cp only", "dd", "no delta sync", etc.
 #  - figure out what to do with dry-runs.
-#  - look at btrfs snapshots.
+#  - look into btrfs snapshots.
