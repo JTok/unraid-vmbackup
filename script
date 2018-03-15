@@ -611,9 +611,7 @@ do
 				# get the filename of the disk without the path.
 				new_disk=$(basename $disk)
 
-				# check the extension of the disk to ensure only .img disks are coppied.
-				#if [ ! "${disk##*.}" == "img" ]; then
-				# CHANGE here to include qcow2 images
+				# check the extension of the disk to ensure only vdisks are copied.
 				# Do not use in conjunction with quemu-img conversion
 				if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
 
@@ -931,9 +929,7 @@ do
 					# get the filename of the disk without the path.
 					new_disk=$(basename $disk)
 
-					# check the extension of the disk to ensure only .img disks are coppied.
-					#if [ ! "${disk##*.}" == "img" ]; then
-					# CHANGE here to include qcow2 images
+					# check the extension of the disk to ensure only vdisks are copied.
 					# Do not use in conjunction with quemu-img conversion
 					if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
 
@@ -1196,10 +1192,6 @@ do
 
 		# set create variable equal to number_of_backups_to_keep plus one to make sure that the correct number of files are kept.
 		backups_plus_1=$(($number_of_backups_to_keep + 1))
-
-		#find . -maxdepth 1 -type f -printf '%T@ %p\0' | sort -r -z -n | awk 'BEGIN { RS="\0"; ORS="\0"; FS="" } NR > 5 { sub("^[0-9]*(.[0-9]*)? ", ""); print }' | xargs -0 rm -f
-		#ls -tp | grep -v '/$' | tail -n +6 | xargs -d '\n' -r rm --
-		#ls -tp | grep -v '/$' | tail -n +6 | tr '\n' '\0' | xargs -0 rm --
 		
 		# remove xml files that are over the limit.
 		ls -tp $backup_location/$vm/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
