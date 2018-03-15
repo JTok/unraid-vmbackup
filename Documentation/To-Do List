@@ -1,5 +1,4 @@
 ## To-Do List ##
 #  - add option to choose copy methodology such as "rsync only", "cp only", "dd", "no delta sync", etc.
 #  - figure out what to do with dry-runs.
-#  - look into a way to compress backups after starting the VM.
 #  - look at btrfs snapshots.

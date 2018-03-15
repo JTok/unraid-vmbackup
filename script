@@ -51,6 +51,7 @@ number_of_days_to_keep_backups="0"
 number_of_backups_to_keep="0"
 
 # default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
+# WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all .xml, .img, and .qcow2 images in the backup directory into ONE tarball.
 compress_backups="0"
 
 # default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
@@ -1002,23 +1003,6 @@ do
 
 					fi
 
-
-					# check to see if backup files should be compressed.
-					if [ "$compress_backups" -eq 1 ]; then
-
-						# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
-						if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
-						
-							tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/$vm.xml" "$backup_location/$vm/$new_disk" && rm "$backup_location/$vm/$vm.xml" "$backup_location/$vm/$new_disk"
-
-						else
-						
-							tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$new_disk" && rm "$backup_location/$vm/$timestamp$vm.xml" "$backup_location/$vm/$timestamp$new_disk"
-
-						fi
-
-					fi
-
 					# send a message to the user based on whether there was an actual copy or a dry-run.
 					if [ "$actually_copy_files" -eq 0 ]; then
 
@@ -1064,9 +1048,16 @@ do
 
 		fi
 
+		# check to see if backup files should be compressed. if so, compress ALL .xml, .img, and .qcow2 files into one tarball and then remove the source files.
+		if [ "$compress_backups" -eq 1 ]; then
+
+			tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/*.{xml,img,qcow2}" && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+
+		fi
+
 	else
 
-		# start the vm after backup based on previous state.
+		# start the vm based on previous state.
 		if [ "$vm_original_state" == "running" ]; then
 			echo "action: vm_original_state is $vm_original_state. starting $vm."
 
@@ -1120,9 +1111,9 @@ do
 
 			fi
 
-			if [[ -n $(find "$j" -type f \( -name "*.img" -o -name "*.qcow2" \) -mmin -$(($days_plus_1*24*60))) ]]; then
+			if [[ -n $(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin -$(($days_plus_1*24*60))) ]]; then
 				
-				find "$j" -type f \( -name "*.img" -o -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -f {} \;
+				find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -f {} \;
 
 			fi
 
