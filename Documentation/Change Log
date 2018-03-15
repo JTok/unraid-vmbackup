@@ -9,12 +9,22 @@
 #  - Uses rsync for syncing changes to backups.
 #  - Corrected some logging errors.
 #  - Temporarily disabled keeping backups for a set number of days.
-#  - Changed default check from 60 seconds to 30 seconds and doubled number of allowed failures.
+#  - Changed default check from 60 seconds to 30 seconds and doubled number of allowed failures to 20.
 #  - VMs are now started after backup if they were running before the backup was started.
 
 # v1.1.0 - 2018/03/14
-#  for the queen
+#  Stephen Hawking special edition
 #
 #  - moved variables closer to the top to make them easier to access.
 #  - added ability to specify specific vdisks to be skipped.
 #  - vm_original_state can be overridden.
+#  - xml and/or vdisk backups can be skipped.
+#  - created variable to set number of days to keep backups.
+#  - support for img and qcow2 files.
+#  - made xml backups more efficient.
+#  - can now set the number of backups to be kept.
+#  - changed from mtime to mmin for more accurate cleaning.
+#  - timestamps are always used except when the number of backups being kept is equal to 1.
+#  - added ability to compress backups.
+#  - added option to compare backups and retry once on failure.
+#  - updated disclaimer.
