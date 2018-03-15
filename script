@@ -481,15 +481,15 @@ fi
 # check to see how many seconds to wait between vm shutdown checks. messages to user only. if input invalid, exit.
 if [[ "$seconds_to_wait" =~ ^[0-9]+$ ]]; then
 
-	if [ "$seconds_to_wait" -lt 60 ]; then
+	if [ "$seconds_to_wait" -lt 30 ]; then
 
 		echo "warning: seconds_to_wait is $seconds_to_wait. this is potentially an insufficient number of seconds to wait between shutdown checks."
 
-	elif [ "$seconds_to_wait" -gt 3000 ]; then
+	elif [ "$seconds_to_wait" -gt 600 ]; then
 
 		echo "warning: seconds_to_wait is seconds_to_wait. this is a vast number of seconds to wait between shutdown checks."
 
-	elif [ "$seconds_to_wait" -ge 60 -a "$seconds_to_wait" -le 3000 ]; then
+	elif [ "$seconds_to_wait" -ge 30 -a "$seconds_to_wait" -le 600 ]; then
 
 		echo "information: seconds_to_wait is $seconds_to_wait. this is probably a sufficent number of seconds to wait between shutdown checks."
 
