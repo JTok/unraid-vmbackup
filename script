@@ -59,6 +59,9 @@ timestamp_files="1"
 
 #### advanced variables ####
 
+# default is 0. set this to 1 to compare files after copy and run rsync in the event of failure. could add significant amount of time depending on the size of vms.
+compare_files="0"
+
 # default is 1. set to 0 if you would like to skip backing up xml configuration files.
 backup_xml="1"
 
@@ -310,6 +313,28 @@ fi
 
 
 #### advanced variables ####
+
+# check to see if files should be compared after backup. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$compare_files" =~ ^(0|1)$ ]]; then
+
+	if [ "$compare_files" -eq 0 ]; then
+
+		echo "information: compare_files is $compare_files. files will not be compared after backups."
+
+	elif [ "$compare_files" -eq 1 ]; then
+
+		echo "information: compare_files is $compare_files. files will be compared after backups."
+
+	fi
+
+else
+
+	echo "failure: compare_files is $compare_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
 
 # check to see if xml should be backed up. if yes, continue if no, continue. if input invalid, exit.
 if [[ "$backup_xml" =~ ^(0|1)$ ]]; then
@@ -783,12 +808,67 @@ do
 				# copy or pretend to copy the xml configuration to the backup location specified by the user.
 				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
 
+				# check to see if compare_files is enabled. if yes, check for xml differences.
+				if [ "$compare_files" -eq 1 ]; then
+
+					if ! cmp -s "$vm.xml" "$backup_location/$vm/$vm.xml"; then
+
+						echo "warning: xml backup file is different than source file. retrying backup."
+
+						rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
+
+						if ! cmp -s "$vm.xml" "$backup_location/$vm/$vm.xml"; then
+
+							echo "warning: xml backup file failed second comparison."
+
+						else
+
+							echo "information: xml backup file passed second comparison. moving on."
+
+						fi
+
+					else
+
+						echo "information: xml backup file matches source file. moving on."
+
+					fi
+
+				fi
+
 			else
 			
 				# copy or pretend to copy the xml configuration to the backup location specified by the user.
 				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
 
+				# check to see if compare_files is enabled. if yes, check for xml differences.
+				if [ "$compare_files" -eq 1 ]; then
+
+					if ! cmp -s "$vm.xml" "$backup_location/$vm/$timestamp$vml.xml"; then
+
+						echo "warning: xml backup file is different than source file. retrying backup."
+
+						rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
+
+						if ! cmp -s "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"; then
+
+							echo "warning: xml backup file failed second comparison."
+
+						else
+
+							echo "information: xml backup file passed second comparison. moving on."
+
+						fi
+
+					else
+
+						echo "information: xml backup file matches source file. moving on."
+
+					fi
+
+				fi
+
 			fi
+
 
 			# delete the local copy of the xml configuration.
 			rm "$vm.xml"
@@ -848,16 +928,37 @@ do
 
 
 					# copy or pretend to copy the vdisk to the backup location specified by the user.
-
-					#	Choose either plain rsync or rsync + zip. Note that the dryrun will throw a few odds
-					#	when running since the zip won't be created.
-					#
-					#	rsync -av$rsync_dry_run_option "$disk" "$backup_location/$vm/$timestamp$new_disk" && zip -j "$backup_location/$vm/$timestamp$vm".zip "$backup_location/$vm/$timestamp"* && rm "$backup_location/$vm/$timestamp"*.img "$backup_location/$vm/$timestamp"*.xml
-
 					# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
 					if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 
 						cp -afv --sparse=always "$disk" "$backup_location/$vm/$new_disk"
+
+						# check to see if compare_files is enabled. if yes, check for vdisk differences.
+						if [ "$compare_files" -eq 1 ]; then
+
+							if ! cmp -s "$disk" "$backup_location/$vm/$new_disk"; then
+
+								echo "warning: vdisk backup file is different than source file. attempting slower rsync backup."
+
+								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$new_disk"
+
+								if ! cmp -s "$disk" "$backup_location/$vm/$new_disk"; then
+
+									echo "warning: vdisk backup file failed second comparison."
+
+								else
+
+									echo "information: vdisk backup file passed second comparison. moving on."
+
+								fi
+
+							else
+
+								echo "information: vdisk backup file matches source file. moving on."
+
+							fi
+
+						fi
 
 					else
 
@@ -872,7 +973,35 @@ do
 
 						fi
 
+						# check to see if compare_files is enabled. if yes, check for vdisk differences.
+						if [ "$compare_files" -eq 1 ]; then
+
+							if ! cmp -s "$disk" "$backup_location/$vm/$timestamp$new_disk"; then
+
+								echo "warning: vdisk backup file is different than source file. attempting slower rsync backup."
+
+								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+								if ! cmp -s "$disk" "$backup_location/$vm/$timestamp$new_disk"; then
+
+									echo "warning: vdisk backup file failed second comparison."
+
+								else
+
+									echo "information: vdisk backup file passed second comparison. moving on."
+
+								fi
+
+							else
+
+								echo "information: vdisk backup file matches source file. moving on."
+
+							fi
+
+						fi
+
 					fi
+
 
 					# check to see if backup files should be compressed.
 					if [ "$compress_backups" -eq 1 ]; then
@@ -900,7 +1029,6 @@ do
 						echo "information: backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
 
 					fi
-
 
 				fi
 
