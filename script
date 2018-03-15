@@ -66,7 +66,7 @@ compare_files="0"
 # default is 1. set to 0 if you would like to skip backing up xml configuration files.
 backup_xml="1"
 
-# default is 1. set to 0 if you would like to skip backing up vdisks.
+# default is 1. set to 0 if you would like to skip backing up vdisks. setting this to 0 will automatically disable compression.
 backup_vdisks="1"
 
 # default is 0. set this to 1 if you would like to start a vm after it has successfully been backed up. will override set_vm_to_original_state when set to 1.
@@ -364,7 +364,9 @@ if [[ "$backup_vdisks" =~ ^(0|1)$ ]]; then
 
 	if [ "$backup_vdisks" -eq 0 ]; then
 
-		echo "warning: backup_vdisks is $backup_vdisks. vms will not have their vdisks backed up."
+		echo "warning: backup_vdisks is $backup_vdisks. vms will not have their vdisks backed up. compression will be set to off."
+
+		compress_backups="0"
 
 	elif [ "$backup_vdisks" -eq 1 ]; then
 
@@ -1048,10 +1050,35 @@ do
 
 		fi
 
-		# check to see if backup files should be compressed. if so, compress ALL .xml, .img, and .qcow2 files into one tarball and then remove the source files.
+		# check to see if backup files should be compressed.
 		if [ "$compress_backups" -eq 1 ]; then
 
-			tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/*.{xml,img,qcow2}" && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+			# check if only one non-timestamped backup is being kept. if so, perform compression without a timestamp. if not, continue as normal.
+			if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+
+				# make sure new image files exist before removing existing tarball
+				if [[ -n $(find "$backup_location/$vm/" -type f \( -name "*.img" -or -name "*.qcow2" \) ) ]]; then
+
+					echo "found new image files. removing existing tarball."
+
+					# remove existing tarball
+					rm "$backup_location/$vm/*.tar.gz"
+
+					# create new compressed tarball with latest backup.
+					tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/*.{xml,img,qcow2}" && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+
+				else
+
+					echo "warning: could not find new image files. backup may have failed. not removing existing tarball."
+
+				fi
+
+			else
+
+				# create compressed tarball with ALL .xml, .img, and .qcow2 files into one tarball and then remove the source files.
+				tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" "$backup_location/$vm/*.{xml,img,qcow2}" && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+
+			fi
 
 		fi
 
