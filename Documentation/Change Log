@@ -34,3 +34,4 @@
 #
 #  - added option to disable delta syncs.
 #  - added option to only use rsync.
+#  - dry-runs can now be used with the rsync_only option.

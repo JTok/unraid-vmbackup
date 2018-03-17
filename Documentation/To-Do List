@@ -1,5 +1,4 @@
 ## To-Do List ##
-#  - figure out what to do with dry-runs.
 #  - look into btrfs snapshots.
 #  - create script to update scripts. will need ability to skip update if it will break functionality of existing scripts. plus ability to keep existing user variables.
 #  - Option to create log file in root of backup folder.

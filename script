@@ -79,10 +79,12 @@ start_vm_after_failure="0"
 # default is 0. set this to 1 to disable rsync delta syncs.
 disable_delta_sync="0"
 
-# default is 0. set this to 1 to use rsync instead of cp. NOTE: rsync was significantly slower in my tests.
+# default is 0. set this to 1 to use rsync instead of cp. 
+# NOTE: rsync was significantly slower in my tests.
 rsync_only="0"
 
-# *CURRENTLY UNUSED* default is 1. set this to 0 if you would like to perform a dry-run backup.
+# default is 1. set this to 0 if you would like to perform a dry-run backup. 
+# WARNING: will not work unless rsync_only is set to 1. if this is set to 1 and rsync_only is set to 0, then backups will be partial and the script won't work correctly.
 actually_copy_files="1"
 
 # default is 20. set this to the number of times you would like to check if a clean shutdown of a vm has been successfull.
