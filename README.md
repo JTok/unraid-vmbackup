@@ -56,6 +56,6 @@ Currently the script is in a relatively stable state, and most of the features h
 
 I do not make any guarantees as to the function of this script. It is provided as-is. Use at your own risk.
 
-###### Originally from unraid-autovmbackup by Daniel Jackson (danioj)
+###### Originally from unraid-autovmbackup by Daniel Jackson (danioj) [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/ "unraid-autovmbackup")
 
-###### Includes additions for removing old backups added by Deeks
+###### Includes additions for removing old backups added by Deeks [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821 "unraid-autovmbackup Deek's script")
