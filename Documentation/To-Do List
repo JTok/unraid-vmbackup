@@ -6,3 +6,4 @@
 #  - Option to create log file in root of backup folder.
 #  - Put warning messages/backup failures in folder in root of backup folder.
 #  - Option to push warnings through notification system.
+#  - backup ovmf nvram files.
