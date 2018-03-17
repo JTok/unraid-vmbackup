@@ -76,6 +76,9 @@ start_vm_after_backup="0"
 # default is 0. set this to 1 if you would like to start a vm after it has failed to have been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_failure="0"
 
+# default is 0. set this to 1 to disable rsync delta syncs and only use cp.
+disable_delta_sync="0"
+
 # *CURRENTLY UNUSED* default is 1. set this to 0 if you would like to perform a dry-run backup.
 actually_copy_files="1"
 
@@ -428,7 +431,29 @@ else
 fi
 
 
-# validate the actually_copy_files option. if yes the rsync command line option for dry-run. if input invalid, exit.
+# check to see if delta sync should be disabled. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$disable_delta_sync" =~ ^(0|1)$ ]]; then
+
+	if [ "$disable_delta_sync" -eq 0 ]; then
+
+		echo "information: disable_delta_sync is $disable_delta_sync. rsync will be used to perform delta sync backups."
+
+	elif [ "$disable_delta_sync" -eq 1 ]; then
+
+		echo "information: disable_delta_sync is $disable_delta_sync. cp will be used instead of rsync."
+
+	fi
+
+else
+
+	echo "failure: disable_delta_sync is $disable_delta_sync. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
+# validate the actually_copy_files option. if yes set the rsync command line option for dry-run. if input invalid, exit.
 if [[ "$actually_copy_files" =~ ^(0|1)$ ]]; then
 
 	if [ "$actually_copy_files" -eq 0 ]; then
@@ -577,8 +602,8 @@ do
 	fi
 
 
-	# see if vdisks should be backed up.
-	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ]; then
+	# see if vdisks should be backed up, if the number of backukps is more than 1, and if disable delta sync is disabled.
+	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
 
 		# get the list of the vdisks associated with the vm and address them one by one.
 		vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
@@ -993,6 +1018,7 @@ do
 
 						else
 
+							# check to see if delta sync is disabled. if so, run cp. if not, continue to rsync delta sync.
 							rsync -av$rsync_dry_run_option --inplace --no-whole-file "$disk" "$backup_location/$vm/$timestamp$new_disk"
 
 							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.

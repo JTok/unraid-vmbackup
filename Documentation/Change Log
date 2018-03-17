@@ -28,3 +28,8 @@
 #  - added ability to compress backups.
 #  - added option to compare backups and retry once on failure.
 #  - updated disclaimer.
+
+# v1.1.1 - 2018/03/17
+#  For the Queen
+#
+#  - added option to disable delta syncs
