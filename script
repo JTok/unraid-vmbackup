@@ -76,8 +76,11 @@ start_vm_after_backup="0"
 # default is 0. set this to 1 if you would like to start a vm after it has failed to have been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_failure="0"
 
-# default is 0. set this to 1 to disable rsync delta syncs and only use cp.
+# default is 0. set this to 1 to disable rsync delta syncs.
 disable_delta_sync="0"
+
+# default is 0. set this to 1 to use rsync instead of cp. NOTE: rsync was significantly slower in my tests.
+rsync_only="0"
 
 # *CURRENTLY UNUSED* default is 1. set this to 0 if you would like to perform a dry-run backup.
 actually_copy_files="1"
@@ -453,6 +456,28 @@ else
 fi
 
 
+# check to see if only rsync should be used. if yes, continue if no, continue. if input invalid, exit.
+if [[ "$rsync_only" =~ ^(0|1)$ ]]; then
+
+	if [ "$rsync_only" -eq 0 ]; then
+
+		echo "information: rsync_only is $rsync_only. rsync will be used to perform delta sync backups."
+
+	elif [ "$rsync_only" -eq 1 ]; then
+
+		echo "information: rsync_only is $rsync_only. cp will be used instead of rsync."
+
+	fi
+
+else
+
+	echo "failure: rsync_only is $rsync_only. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+
 # validate the actually_copy_files option. if yes set the rsync command line option for dry-run. if input invalid, exit.
 if [[ "$actually_copy_files" =~ ^(0|1)$ ]]; then
 
@@ -652,7 +677,15 @@ do
 				# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
 				if [ -f "$newest_vdisk_file" ]; then
 
-					cp -av --sparse=always "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
+					if [ "$rsync_only" -eq 1 ]; then
+					
+						rsync -av$rsync_dry_run_option --sparse "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
+
+					else
+
+						cp -av --sparse=always "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
+
+					fi
 
 					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 					touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
@@ -971,7 +1004,15 @@ do
 					# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
 					if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 
-						cp -afv --sparse=always "$disk" "$backup_location/$vm/$new_disk"
+						if [ "$rsync_only" -eq 1 ]; then
+
+							rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$new_disk"
+
+						else
+
+							cp -afv --sparse=always "$disk" "$backup_location/$vm/$new_disk"
+
+						fi
 
 						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 						touch -d "now" "$backup_location/$vm/$new_disk"
@@ -1011,7 +1052,15 @@ do
 						# check to see if an existing backup was already copied. if so, use rsync. if not, use cp.
 						if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
 
-							cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
+							if [ "$rsync_only" -eq 1 ]; then
+
+								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+							else
+
+								cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+							fi
 
 							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 							touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
