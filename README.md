@@ -4,6 +4,8 @@ Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-tec
 
 Currently the script is in a relatively stable state, and most of the features have been implemented. I have tested them as well as I can, but I cannot guarantee they will work correctly for everyone, so be sure to test thoroughly on your system before depending on this script for backups. Please review the Change Log and To-Do List if you would like to know more.
 
+v1.1.1 - 2018/03/18
+
 ## Installation
 
 - Add the script to the CA User Scripts plugin.
@@ -36,11 +38,23 @@ Currently the script is in a relatively stable state, and most of the features h
 
 - Choose the number backups to keep.
 
+#### Logging and notification options
+
+- Option to log to file.
+
+- Choose the number of log files to keep.
+
+- Option to log messages through unRAID notification system.
+
 #### Additional options
 
 - Option to compress backups.
 
 - Option to timestamp backups.
+
+- Option to disable delta syncs.
+
+- Option to only use rsync.
 
 - Advanced: Option to compare files and retry backup in the event of failure.
 
