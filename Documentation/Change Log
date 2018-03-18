@@ -36,6 +36,6 @@
 #  - added option to only use rsync.
 #  - dry-runs can now be used with the rsync_only option.
 #  - added dates to logging.
-#  - creates logs in backup folder.
-#  - creates error logs backup folder.
+#  - creates log files in backup folder.
+#  - creates error log files in backup folder.
 #  - log messages pushed through unRAID notification system by default.
