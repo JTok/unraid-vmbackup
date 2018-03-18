@@ -28,3 +28,14 @@
 #  - added ability to compress backups.
 #  - added option to compare backups and retry once on failure.
 #  - updated disclaimer.
+
+# v1.1.1 - 2018/03/18
+#  For the Queen
+#
+#  - added option to disable delta syncs.
+#  - added option to only use rsync.
+#  - dry-runs can now be used with the rsync_only option.
+#  - added dates to logging.
+#  - creates logs in backup folder.
+#  - creates error logs backup folder.
+#  - log messages pushed through unRAID notification system by default.

@@ -1,4 +1,3 @@
 ## To-Do List ##
-#  - add option to choose copy methodology such as "rsync only", "cp only", "dd", "no delta sync", etc.
-#  - figure out what to do with dry-runs.
 #  - look into btrfs snapshots.
+#  - create script to update scripts. will need ability to skip update if it will break functionality of existing scripts. plus ability to keep existing user variables.
