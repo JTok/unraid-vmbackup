@@ -2,3 +2,4 @@
 #  - look into btrfs snapshots.
 #  - create script to update scripts. will need ability to skip update if it will break functionality of existing scripts. plus ability to keep existing user variables.
 #  - add levels to unraid notifications. such as error only.
+#  - update readme installation instructions to be more precise.
