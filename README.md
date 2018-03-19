@@ -8,11 +8,11 @@ v1.1.1 - 2018/03/18
 
 ## Installation
 
-- Add the script to the CA User Scripts plugin.
+- Add the script and description files to the CA User Scripts plugin. No other files are necessary to make the script work.
 
-- Set the variables.
+- Set the variables in the script file.
 
-- Choose a schedule.
+- Choose a schedule in the CA User Scripts plugin.
 
 ### Script options
 

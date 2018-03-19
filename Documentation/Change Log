@@ -39,3 +39,7 @@
 #  - creates log files in backup folder.
 #  - creates error log files in backup folder.
 #  - log messages pushed through unRAID notification system by default.
+
+# v1.1.2 - 2018/03/19
+#
+#  - updated readme.
