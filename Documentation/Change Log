@@ -41,5 +41,7 @@
 #  - log messages pushed through unRAID notification system by default.
 
 # v1.1.2 - 2018/03/19
+#  The Land Before Time 4: how many are there anyway?
 #
 #  - updated readme.
+#  - added option to only receive error notifications.

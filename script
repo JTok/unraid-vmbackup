@@ -2,7 +2,7 @@
 #backgroundOnly=true
 #arrayStarted=true
 
-# v1.1.1 - 2018/03/18
+# v1.1.2 - 2018/03/19
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -115,12 +115,15 @@ keep_error_log_file="1"
 # default is 10. number of error log files to keep. 0 means infinitely.
 number_of_error_log_files_to_keep="10"
 
+# default is 0. set to 1 to only send error notifications.
+only_send_error_notifications="0"
+
 ################################################## script variables end #########################################################
 
 
 ###################################################### script start #############################################################
 
-if [ "$send_notifications" -eq 1 ]; then
+if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
 	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_start" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting" -i "normal" -m "unRAID VM Backup script is starting. Look for finished message."
 
@@ -1650,7 +1653,7 @@ if [ "$send_notifications" -eq 1 ]; then
 
 		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished with errors" -i "alert" -m "unRAID VM Backup script finished with errors. See log files in $backup_location/$log_file_subfolder for details."
 
-	else
+	elif [ "$only_send_error_notifications" -eq 0 ]
 
 		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_finished" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished" -i "normal" -m "unRAID VM Backup script finished. See log files in $backup_location/$log_file_subfolder for details."
 
