@@ -2,3 +2,4 @@
 #  - look into btrfs snapshots.
 #  - create script to update scripts. will need ability to skip update if it will break functionality of existing scripts. plus ability to keep existing user variables.
 #  - possible to make into a plugin?
+#  - detailed notifications mode. At least the ability to get per VM start and finished notifications.
