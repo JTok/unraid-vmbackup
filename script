@@ -119,16 +119,6 @@ number_of_error_log_files_to_keep="10"
 only_send_error_notifications="0"
 
 
-#### btrfs variables ####
-# WARNING: only change the btrfs variables if you truly understand what you are doing.
-
-# default is 0. set to 1 to enable btrfs cache volume snapshots. VMs must already be in a btrfs subvolume for this to work.
-enable_btrfs_snapshots="0"
-
-# set to vm subvolume that snapshot should be taken of.
-btrfs_subvolume="/mnt/user/domains/"
-
-
 ################################################## script variables end #########################################################
 
 
@@ -842,61 +832,6 @@ else
 	exit 1
 
 fi
-
-
-#### btrfs variables ####
-
-
-# check to see if btrfs snapshots are enabled. if yes, continue. if no, continue. if input invalid, exit.
-if [[ "$enable_btrfs_snapshots" =~ ^(0|1)$ ]]; then
-
-	if [ "$enable_btrfs_snapshots" -eq 0 ]; then
-
-		echo `date '+%Y-%m-%d %H:%M'` " information: enable_btrfs_snapshots is $enable_btrfs_snapshots. btrfs snapshots are not enabled. this is normal, do not enable unless you know what you're doing." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-	elif  [ "$enable_btrfs_snapshots" -eq 1 ]; then
-
-		echo `date '+%Y-%m-%d %H:%M'` " information: enable_btrfs_snapshots is $enable_btrfs_snapshots. btrfs snapshots are enabled." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-	fi
-
-else
-
-	echo `date '+%Y-%m-%d %H:%M'` " failure: enable_btrfs_snapshots is $enable_btrfs_snapshots. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: enable_btrfs_snapshots is $enable_btrfs_snapshots. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
-
-	exit 1
-
-fi
-
-
-# remove the trailing slash from btrfs subvolume path if it exists.
-btrfs_subvolume=${btrfs_subvolume%/}
-
-
-echo `date '+%Y-%m-%d %H:%M'` " information: started attempt to backup "$vms_to_backup" to $backup_location" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-
-# set this to force the for loop to split on new lines and not spaces.
-IFS=$'\n'
-
-
-# check to see if the subvolume is a btrfs subvolume
-is_btrfs_subvolume() {
-    local _dir=$1
-    [ "$(stat -f --format="%T" "$_dir")" == "btrfs" ] || return 1
-    inode="$(stat --format="%i" "$_dir")"
-    case "$inode" in
-        2|256)
-            return 0;;
-        *)
-            return 1;;
-    esac
-}
-
-btrfs_test_result=is_btrfs_subvolume($btrfs_subvolume)
-
 
 
 # loop through the vms in the list and try and back up thier associated xml configurations and vdisk(s).
