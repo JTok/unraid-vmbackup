@@ -1807,19 +1807,19 @@ do
 
 				fi
 
-				find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -f {} \;
+				find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 			fi
 
 			if [[ -n $(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin -$(($days_plus_1*24*60))) ]]; then
 				
-				find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -f {} \;
+				find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 			fi
 
 			if [[ -n $(find "$j" -type f \( -name "*.tar.gz" \) -mmin -$(($days_plus_1*24*60))) ]]; then
 				
-				find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -f {} \;
+				find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 			fi
 
@@ -1840,13 +1840,13 @@ do
 		backups_plus_1=$(($number_of_backups_to_keep + 1))
 		
 		# remove xml files that are over the limit.
-		ls -tp $backup_location/$vm/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
+		ls -tp $backup_location/$vm/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
 
 		# remove image files that are over the limit.
-		ls -tp $backup_location/$vm/*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
+		ls -tp $backup_location/$vm/*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
 
 		# remove tar.gz files that are over the limit.
-		ls -tp $backup_location/$vm/*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm --
+		ls -tp $backup_location/$vm/*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
 
 	fi
 

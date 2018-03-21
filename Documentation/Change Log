@@ -49,3 +49,4 @@
 #  - fixed issue where not all warnings were using notification system.
 #  - fixed send_notifications not being able to disable most notifications.
 #  - added detailed notification option.
+#  - made rm commands verbose.
