@@ -45,3 +45,7 @@
 #
 #  - updated readme.
 #  - added option to only receive error notifications.
+#  - fixed issue where not all failures were using notification system.
+#  - fixed issue where not all warnings were using notification system.
+#  - fixed send_notifications not being able to disable most notifications.
+#  - added detailed notification option.

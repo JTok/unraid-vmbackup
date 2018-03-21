@@ -71,8 +71,11 @@ number_of_log_files_to_keep="1"
 # default is "logs". set to "" to put in root of backups folder.
 log_file_subfolder="logs"
 
-# default is 1. set to 0 to prevent notification system from being used.
+# default is 1. set to 0 to prevent notification system from being used. Script failures that occur before logging can start, and before this variable is validated will still be sent.
 send_notifications="1"
+
+# default is 0. set to 1 to receive more detailed notifications. will not work with send_notifications disabled or only_send_error_notifications enabled.
+detailed_notifications="0"
 
 
 #### advanced variables ####
@@ -126,7 +129,7 @@ only_send_error_notifications="0"
 
 if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_start" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting" -i "normal" -m "unRAID VM Backup script is starting. Look for finished message."
+	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_start" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting" -i "normal" -m `date '+%Y-m%-d %H:%M'` " information: unRAID VM Backup script is starting. Look for finished message."
 
 fi
 
@@ -392,7 +395,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -416,7 +423,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: set_vm_to_original_state is $set_vm_to_original_state. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: set_vm_to_original_state is $set_vm_to_original_state. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: set_vm_to_original_state is $set_vm_to_original_state. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -452,7 +463,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is not a valid format. expecting a number between [0 - 1000000]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+	
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+
+	fi
 
 	exit 1
 
@@ -488,7 +503,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: number_of_backups_to_keep is $number_of_backups_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: number_of_backups_to_keep is $number_of_backups_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: number_of_backups_to_keep is $number_of_backups_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+
+	fi
 
 	exit 1
 
@@ -512,7 +531,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: compress_backups is $compress_backups. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: compress_backups is $compress_backups. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: compress_backups is $compress_backups. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -538,7 +561,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: compare_files is $compare_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: compare_files is $compare_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: compare_files is $compare_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -562,7 +589,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: backup_xml is $backup_xml. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: backup_xml is $backup_xml. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: backup_xml is $backup_xml. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -588,7 +619,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: backup_vdisks is $backup_vdisks. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: backup_vdisks is $backup_vdisks. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: backup_vdisks is $backup_vdisks. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -612,7 +647,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: start_vm_after_backup is $start_vm_after_backup. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: start_vm_after_backup is $start_vm_after_backup. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: start_vm_after_backup is $start_vm_after_backup. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -636,7 +675,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: start_vm_after_failure is $start_vm_after_failure. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: start_vm_after_failure is $start_vm_after_failure. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: start_vm_after_failure is $start_vm_after_failure. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -660,7 +703,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: disable_delta_sync is $disable_delta_sync. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: disable_delta_sync is $disable_delta_sync. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: disable_delta_sync is $disable_delta_sync. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -684,7 +731,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: rsync_only is $rsync_only. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: rsync_only is $rsync_only. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: rsync_only is $rsync_only. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -711,7 +762,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: actually_copy_files is $actually_copy_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: actually_copy_files is $actually_copy_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: actually_copy_files is $actually_copy_files. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -739,7 +794,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: clean_shutdown_checks is $clean_shutdown_checks. this is not a valid format. expecting a number between [0 - 1000000]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: clean_shutdown_checks is $clean_shutdown_checks. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: clean_shutdown_checks is $clean_shutdown_checks. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+
+	fi
 
 	exit 1
 
@@ -767,7 +826,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: seconds_to_wait is $seconds_to_wait. this is not a valid format. expecting a number between [0 - 1000000]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: seconds_to_wait is $seconds_to_wait. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: seconds_to_wait is $seconds_to_wait. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+
+	fi
 
 	exit 1
 
@@ -791,7 +854,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: keep_error_log_file is $keep_error_log_file. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: keep_error_log_file is $keep_error_log_file. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: keep_error_log_file is $keep_error_log_file. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -827,7 +894,11 @@ else
 
 	echo `date '+%Y-%m-%d %H:%M'` " failure: number_of_error_log_files_to_keep is $number_of_error_log_files_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: number_of_error_log_files_to_keep is $number_of_error_log_files_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` " failure: number_of_error_log_files_to_keep is $number_of_error_log_files_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+
+	fi
 
 	exit 1
 
@@ -868,6 +939,12 @@ do
 	if [ "$skip_vm" == "y" ]; then
 
 		echo `date '+%Y-%m-%d %H:%M'` " warning: $vm can not be found on the system. skipping vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+	
+		if [ "$send_notifications" -eq 1 ]; then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script skipping vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $vm can not be found on the system. skipping vm."
+
+		fi
 
 		skip_vm="n"
 
@@ -908,6 +985,12 @@ do
 
 			echo `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+			if [ "$send_notifications" -eq 1 ]; then
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup."
+
+			fi
+
 		fi
 
 
@@ -935,6 +1018,12 @@ do
 				if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
 
 					echo `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+					
+					if [ "$send_notifications" -eq 1 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no valid vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping."
+
+					fi
 
 					continue
 
@@ -945,6 +1034,18 @@ do
 
 				# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
 				if [ -f "$newest_vdisk_file" ]; then
+
+					echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+					if [ $detailed_notifications -eq 1 ]
+						
+						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting copy vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting."
+
+						fi
+
+					fi
 
 					if [ "$rsync_only" -eq 1 ]; then
 					
@@ -964,11 +1065,21 @@ do
 				# send a message to the user based on whether there was an actual copy or a dry-run.
 				if [ "$actually_copy_files" -eq 0 ]; then
 
-					echo `date '+%Y-%m-%d %H:%M'` " information: dry-run copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					echo `date '+%Y-%m-%d %H:%M'` " information: dry-run copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				else
 
-					echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+					if [ $detailed_notifications -eq 1 ]
+						
+						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed copy vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+
+						fi
+
+					fi
 
 				fi
 
@@ -1054,6 +1165,12 @@ do
 
 							echo `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+							if [ "$send_notifications" -eq 1 ];then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup failed" -i "alert" -m `date '+%Y-m%-d %H:%M'` "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+							fi
+
 						fi
 
 					# if the user doesn't want to force a shutdown then there is nothing more to do so i cannot backup the vm.
@@ -1063,6 +1180,12 @@ do
 						can_backup_vm="n"
 
 						echo `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+						if [ "$send_notifications" -eq 1 ];then
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+						fi
 
 					fi
 
@@ -1086,6 +1209,12 @@ do
 
 				echo `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+				if [ "$send_notifications" -eq 1 ];then
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+				fi
+
 			fi
 
 		done
@@ -1108,6 +1237,12 @@ do
 
 		echo `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+		if [ "$send_notifications" -eq 1 ];then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+		fi
+
 
 	# if the vm is in a state that has not been explicitly defined then do nothing as it is unknown how to handle it.
 	else
@@ -1117,6 +1252,12 @@ do
 
 		echo `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+		if [ "$send_notifications" -eq 1 ];then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+		fi
+
 	fi
 
 
@@ -1125,6 +1266,15 @@ do
 
 		echo `date '+%Y-%m-%d %H:%M'` " action: can_backup_vm flag is $can_backup_vm. starting backup of $vm xml configuration and vdisk(s)." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
+		if [ $detailed_notifications -eq 1 ]
+			
+			if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: can_backup_vm flag is $can_backup_vm. starting backup of $vm xml configuration and vdisk(s)."
+
+			fi
+
+		fi
 
 		# see if xml should be backed up.
 		if [ "$backup_xml" -eq 1 ]; then
@@ -1150,6 +1300,12 @@ do
 
 						echo `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+						if [ "$send_notifications" -eq 1 ]; then
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup."
+
+						fi
+
 						rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
 
 						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
@@ -1157,7 +1313,13 @@ do
 
 						if ! cmp -s "$vm.xml" "$backup_location/$vm/$vm.xml"; then
 
-							echo `date '+%Y-%m-%d %H:%M'` " warning: xml backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+							echo `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+					
+							if [ "$send_notifications" -eq 1 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison."
+
+							fi
 
 						else
 
@@ -1187,6 +1349,12 @@ do
 					if ! cmp -s "$vm.xml" "$backup_location/$vm/$timestamp$vml.xml"; then
 
 						echo `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+					
+						if [ "$send_notifications" -eq 1 ]; then
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup."
+
+						fi
 
 						rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
 
@@ -1195,7 +1363,13 @@ do
 
 						if ! cmp -s "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"; then
 
-							echo `date '+%Y-%m-%d %H:%M'` " warning: xml backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+							echo `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+							if [ "$send_notifications" -eq 1 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison."
+
+							fi
 
 						else
 
@@ -1243,6 +1417,12 @@ do
 
 				echo `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+				if [ "$send_notifications" -eq 1 ]; then
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup."
+
+				fi
+
 			fi
 
 
@@ -1261,6 +1441,12 @@ do
 					if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
 
 						echo `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+						if [ "$send_notifications" -eq 1 ]; then
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no valid vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping."
+
+						fi
 
 						continue
 
@@ -1293,6 +1479,12 @@ do
 
 								echo `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup."
+
+								fi
+
 								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$new_disk"
 
 								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
@@ -1300,7 +1492,13 @@ do
 
 								if ! cmp -s "$disk" "$backup_location/$vm/$new_disk"; then
 
-									echo `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+									echo `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+									if [ "$send_notifications" -eq 1 ]; then
+
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison."
+
+									fi
 
 								else
 
@@ -1351,6 +1549,12 @@ do
 
 								echo `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup."
+
+								fi
+
 								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$timestamp$new_disk"
 
 								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
@@ -1358,7 +1562,13 @@ do
 
 								if ! cmp -s "$disk" "$backup_location/$vm/$timestamp$new_disk"; then
 
-									echo `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+									echo `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+									if [ "$send_notifications" -eq 1 ]; then
+
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison."
+
+									fi
 
 								else
 
@@ -1400,12 +1610,32 @@ do
 			if [ "$vm_original_state" == "running" ]; then
 				echo `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
+				if [ $detailed_notifications -eq 1 ]
+					
+					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm."
+
+					fi
+
+				fi
+
 				# start vm
 				virsh start "$vm"
 
 			else
 
 				echo `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				if [ $detailed_notifications -eq 1 ]
+				
+					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script not starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm."
+
+					fi
+
+				fi
 
 			fi
 		fi
@@ -1415,6 +1645,16 @@ do
 		if [ "$start_vm_after_backup" -eq 1 ]; then
 
 			echo `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_backup is $start_vm_after_backup. starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			if [ $detailed_notifications -eq 1 ]
+				
+				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_backup is $start_vm_after_backup. starting $vm."
+
+				fi
+
+			fi
 
 			# try and start the vm.
 			virsh start "$vm"
@@ -1442,6 +1682,12 @@ do
 
 					echo `date '+%Y-%m-%d %H:%M'` " warning: could not find new image files. backup may have failed. not removing existing tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
+					if [ "$send_notifications" -eq 1 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no new image files" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: could not find new image files. backup may have failed. not removing existing tarball."
+
+					fi
+
 				fi
 
 			else
@@ -1459,6 +1705,16 @@ do
 		if [ "$vm_original_state" == "running" ]; then
 			echo `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
+			if [ $detailed_notifications -eq 1 ]
+				
+				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm."
+
+				fi
+
+			fi
+
 			# start vm
 			virsh start "$vm"
 
@@ -1466,16 +1722,42 @@ do
 
 			echo `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
+			if [ $detailed_notifications -eq 1 ]
+				
+				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script not starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm."
+
+				fi
+
+			fi
+
 		fi
 
 		# for whatever reason the backup attempt failed.
 		echo `date '+%Y-%m-%d %H:%M'` " failure: backup of "$vm" to $backup_location/$vm failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+		if [ "$send_notifications" -eq 1 ];then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: backup of "$vm" to $backup_location/$vm failed."
+
+		fi
 
 
 		# if start_vm_after_failure is set to 1 then start the vm but dont check that it has been successfull.
 		if [ "$start_vm_after_failure" -eq 1 ]; then
 
 			echo `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_failure is $start_vm_after_failure starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			if [ $detailed_notifications -eq 1 ]
+				
+				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_failure is $start_vm_after_failure starting $vm."
+
+				fi
+
+			fi
 
 			# try and start the vm.
 			virsh start "$vm"
@@ -1486,6 +1768,16 @@ do
 
 
 	echo `date '+%Y-%m-%d %H:%M'` " information: backup of "$vm" to $backup_location/$vm completed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+	if [ $detailed_notifications -eq 1 ]
+				
+		if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: backup of "$vm" to $backup_location/$vm completed."
+
+		fi
+
+	fi
 
 	# check to see how many days backups should be kept.
 	if [ $number_of_days_to_keep_backups -eq 0 ]; then
@@ -1504,7 +1796,17 @@ do
 		do
 
 			if [[ -n $(find "$j" -type f \( -name "*.xml" \) -mmin -$(($days_plus_1*24*60))) ]]; then
-				
+
+				if [ $detailed_notifications -eq 1 ]
+							
+					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_backups" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove backups" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: found backups older than $number_of_days_to_keep_backups days. removing."
+
+					fi
+
+				fi
+
 				find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -f {} \;
 
 			fi
@@ -1646,11 +1948,11 @@ if [ "$send_notifications" -eq 1 ]; then
 
 	if [ "$errors" -eq 1 ]; then
 
-		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished with errors" -i "alert" -m "unRAID VM Backup script finished with errors. See log files in $backup_location/$log_file_subfolder for details."
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished with errors" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " warning: unRAID VM Backup script finished with errors. See log files in $backup_location/$log_file_subfolder for details."
 
 	elif [ "$only_send_error_notifications" -eq 0 ]
 
-		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_finished" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished" -i "normal" -m "unRAID VM Backup script finished. See log files in $backup_location/$log_file_subfolder for details."
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_finished" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: unRAID VM Backup script finished. See log files in $backup_location/$log_file_subfolder for details."
 
 	fi
 
