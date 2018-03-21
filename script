@@ -662,7 +662,7 @@ if [[ "$disable_delta_sync" =~ ^(0|1)$ ]]; then
 
 	elif [ "$disable_delta_sync" -eq 1 ]; then
 
-		echo `date '+%Y-%m-%d %H:%M'` " information: disable_delta_sync is $disable_delta_sync. cp will be used instead of rsync." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		echo `date '+%Y-%m-%d %H:%M'` " information: disable_delta_sync is $disable_delta_sync. no delta syncs will be done." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	fi
 
@@ -682,11 +682,11 @@ if [[ "$rsync_only" =~ ^(0|1)$ ]]; then
 
 	if [ "$rsync_only" -eq 0 ]; then
 
-		echo `date '+%Y-%m-%d %H:%M'` " information: rsync_only is $rsync_only. rsync will be used to perform delta sync backups." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		echo `date '+%Y-%m-%d %H:%M'` " information: rsync_only is $rsync_only. cp will be used when applicable." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$rsync_only" -eq 1 ]; then
 
-		echo `date '+%Y-%m-%d %H:%M'` " information: rsync_only is $rsync_only. cp will be used instead of rsync." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		echo `date '+%Y-%m-%d %H:%M'` " information: rsync_only is $rsync_only. only rsync will be used." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	fi
 
