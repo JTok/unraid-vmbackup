@@ -2,7 +2,7 @@
 #backgroundOnly=true
 #arrayStarted=true
 
-# v1.1.2 - 2018/03/19
+# v1.1.2 - 2018/03/22
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -1037,7 +1037,7 @@ do
 
 					echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					if [ $detailed_notifications -eq 1 ]
+					if [ $detailed_notifications -eq 1 ]; then
 						
 						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1071,7 +1071,7 @@ do
 
 					echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					if [ $detailed_notifications -eq 1 ]
+					if [ $detailed_notifications -eq 1 ]; then
 						
 						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1266,7 +1266,7 @@ do
 
 		echo `date '+%Y-%m-%d %H:%M'` " action: can_backup_vm flag is $can_backup_vm. starting backup of $vm xml configuration and vdisk(s)." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-		if [ $detailed_notifications -eq 1 ]
+		if [ $detailed_notifications -eq 1 ]; then
 			
 			if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1610,7 +1610,7 @@ do
 			if [ "$vm_original_state" == "running" ]; then
 				echo `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-				if [ $detailed_notifications -eq 1 ]
+				if [ $detailed_notifications -eq 1 ]; then
 					
 					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1627,7 +1627,7 @@ do
 
 				echo `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-				if [ $detailed_notifications -eq 1 ]
+				if [ $detailed_notifications -eq 1 ]; then
 				
 					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1646,7 +1646,7 @@ do
 
 			echo `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_backup is $start_vm_after_backup. starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			if [ $detailed_notifications -eq 1 ]
+			if [ $detailed_notifications -eq 1 ]; then
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1705,7 +1705,7 @@ do
 		if [ "$vm_original_state" == "running" ]; then
 			echo `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			if [ $detailed_notifications -eq 1 ]
+			if [ $detailed_notifications -eq 1 ]; then
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1722,7 +1722,7 @@ do
 
 			echo `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			if [ $detailed_notifications -eq 1 ]
+			if [ $detailed_notifications -eq 1 ]; then
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1749,7 +1749,7 @@ do
 
 			echo `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_failure is $start_vm_after_failure starting $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			if [ $detailed_notifications -eq 1 ]
+			if [ $detailed_notifications -eq 1 ]; then
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1769,7 +1769,7 @@ do
 
 	echo `date '+%Y-%m-%d %H:%M'` " information: backup of "$vm" to $backup_location/$vm completed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-	if [ $detailed_notifications -eq 1 ]
+	if [ $detailed_notifications -eq 1 ]; then
 				
 		if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
@@ -1788,6 +1788,12 @@ do
 
 		echo `date '+%Y-%m-%d %H:%M'` " information: cleaning out backups older than $number_of_days_to_keep_backups days in location ONLY if newer files exist in " $backup_location/$vm/ | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
+		if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove xmls" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: cleaning out backups older than $number_of_days_to_keep_backups days in location ONLY if newer files exist in " $backup_location/$vm/
+
+		fi
+
 		# create variable equal to number_of_days_to_keep_backups plus one to make sure that there are files younger than the cutoff date.
 		days_plus_1=$(($number_of_days_to_keep_backups + 1))
 
@@ -1797,29 +1803,55 @@ do
 
 			if [[ -n $(find "$j" -type f \( -name "*.xml" \) -mmin -$(($days_plus_1*24*60))) ]]; then
 
-				if [ $detailed_notifications -eq 1 ]
-							
-					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+				if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_backups" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove backups" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: found backups older than $number_of_days_to_keep_backups days. removing."
+					deleted_files=$(find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
-					fi
+					echo `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove xmls" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+				else
+
+					find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 				fi
-
-				find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 			fi
 
 			if [[ -n $(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin -$(($days_plus_1*24*60))) ]]; then
+
+				if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+					deleted_files=$(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+
+					echo `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove vdisks" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+				else
 				
-				find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+				
+				fi
 
 			fi
 
 			if [[ -n $(find "$j" -type f \( -name "*.tar.gz" \) -mmin -$(($days_plus_1*24*60))) ]]; then
 				
-				find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+				if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+					deleted_files=$(find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+
+					echo `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove tarballs" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+				else
+
+					find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+
+				fi
 
 			fi
 
@@ -1836,17 +1868,59 @@ do
 
 		echo `date '+%Y-%m-%d %H:%M'` " information: cleaning out backups over $number_of_backups_to_keep in location " $backup_location/$vm/ | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
+		if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove xmls" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: cleaning out backups over $number_of_backups_to_keep in location " $backup_location/$vm/
+		
+		fi
+
 		# create variable equal to number_of_backups_to_keep plus one to make sure that the correct number of files are kept.
 		backups_plus_1=$(($number_of_backups_to_keep + 1))
 		
 		# remove xml files that are over the limit.
-		ls -tp $backup_location/$vm/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+		if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			deleted_files=$(ls -tp $backup_location/$vm/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --)
+
+			echo `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove xmls" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+		else
+
+			ls -tp $backup_location/$vm/*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+		
+		fi
 
 		# remove image files that are over the limit.
-		ls -tp $backup_location/$vm/*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+		if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			deleted_files=$(ls -tp $backup_location/$vm/*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --)
+
+			echo `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove vdisks" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+		else
+
+			ls -tp $backup_location/$vm/*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+
+		fi
 
 		# remove tar.gz files that are over the limit.
-		ls -tp $backup_location/$vm/*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+		if [ $detailed_notifications -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			deleted_files=$(ls -tp $backup_location/$vm/*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --)
+
+			echo `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "unRAID VM Backup script remove tarballs" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: $deleted_files"
+
+		else
+
+			ls -tp $backup_location/$vm/*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+
+		fi
 
 	fi
 

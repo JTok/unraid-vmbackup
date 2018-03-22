@@ -40,7 +40,7 @@
 #  - creates error log files in backup folder.
 #  - log messages pushed through unRAID notification system by default.
 
-# v1.1.2 - 2018/03/19
+# v1.1.2 - 2018/03/22
 #  The Land Before Time 4: how many are there anyway?
 #
 #  - updated readme.
@@ -49,4 +49,6 @@
 #  - fixed issue where not all warnings were using notification system.
 #  - fixed send_notifications not being able to disable most notifications.
 #  - added detailed notification option.
+#  - detailed notifications: sends notifications when vm backups are started and stopped.
+#  - detailed notifications: sends notifications when old backups are deleted.
 #  - made rm commands verbose.
