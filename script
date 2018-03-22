@@ -2024,7 +2024,7 @@ if [ "$send_notifications" -eq 1 ]; then
 
 		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished with errors" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " warning: unRAID VM Backup script finished with errors. See log files in $backup_location/$log_file_subfolder for details."
 
-	elif [ "$only_send_error_notifications" -eq 0 ]
+	elif [ "$only_send_error_notifications" -eq 0 ]; then
 
 		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_finished" -s "unRAID VM Backup script" -d "unRAID VM Backup script finished" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: unRAID VM Backup script finished. See log files in $backup_location/$log_file_subfolder for details."
 
