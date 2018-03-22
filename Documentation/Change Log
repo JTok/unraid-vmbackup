@@ -52,3 +52,5 @@
 #  - detailed notifications: sends notifications when vm backups are started and stopped.
 #  - detailed notifications: sends notifications when old backups are deleted.
 #  - made rm commands verbose.
+#  - updated notification messages to be more precise.
+#  - updated and fixed script syntax.
