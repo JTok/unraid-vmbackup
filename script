@@ -1091,25 +1091,27 @@ do
 
 						fi
 
+					fi
+
 					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 					touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
-				fi
+					# send a message to the user based on whether there was an actual copy or a dry-run.
+					if [ "$actually_copy_files" -eq 0 ]; then
 
-				# send a message to the user based on whether there was an actual copy or a dry-run.
-				if [ "$actually_copy_files" -eq 0 ]; then
+						echo `date '+%Y-%m-%d %H:%M'` " information: dry-run copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					echo `date '+%Y-%m-%d %H:%M'` " information: dry-run copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					else
 
-				else
+						echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+						if [ $detailed_notifications -eq 1 ]; then
+							
+							if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					if [ $detailed_notifications -eq 1 ]; then
-						
-						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed copy $vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete."
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed copy $vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+							fi
 
 						fi
 
