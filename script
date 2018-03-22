@@ -942,7 +942,7 @@ do
 	
 		if [ "$send_notifications" -eq 1 ]; then
 
-			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script skipping vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $vm can not be found on the system. skipping vm."
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script skipping $vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $vm can not be found on the system. skipping vm."
 
 		fi
 
@@ -987,7 +987,7 @@ do
 
 			if [ "$send_notifications" -eq 1 ]; then
 
-				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup."
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no vdisk(s) for $vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup."
 
 			fi
 
@@ -1021,7 +1021,7 @@ do
 					
 					if [ "$send_notifications" -eq 1 ]; then
 
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no valid vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping."
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no valid vdisk(s) for $vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping."
 
 					fi
 
@@ -1037,11 +1037,11 @@ do
 
 					echo `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					if [ $detailed_notifications -eq 1 ]; then
+					if [ "$detailed_notifications" -eq 1 ]; then
 						
 						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting copy vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting."
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting copy $vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting."
 
 						fi
 
@@ -1051,11 +1051,45 @@ do
 					
 						rsync -av$rsync_dry_run_option --sparse "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
 
+						# get rsync result and send notification
+						if [[ $? -eq 0 ]]; then
+						
+							if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script copy $vm backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk succeeded."
+
+							fi
+
+						else
+
+							if [ "$send_notifications" -eq 1 ]; then
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script copy $vm backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
+
+							fi
+
+						fi
+
 					else
 
 						cp -av --sparse=always "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
 
-					fi
+						# get cp result and send notification
+						if [[ $? -eq 0 ]]; then
+						
+							if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script copy $vm backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk succeeded."
+
+							fi
+
+						else
+
+							if [ "$send_notifications" -eq 1 ]; then
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script copy $vm backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
+
+							fi
+
+						fi
 
 					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 					touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
@@ -1075,7 +1109,7 @@ do
 						
 						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed copy vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed copy $vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete."
 
 						fi
 
@@ -1270,7 +1304,7 @@ do
 			
 			if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: can_backup_vm flag is $can_backup_vm. starting backup of $vm xml configuration and vdisk(s)."
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script starting $vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: can_backup_vm flag is $can_backup_vm. starting backup of $vm xml configuration and vdisk(s)."
 
 			fi
 
@@ -1290,6 +1324,24 @@ do
 				# copy or pretend to copy the xml configuration to the backup location specified by the user.
 				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
 
+				# get rsync result and send notification
+				if [[ $? -eq 0 ]]; then
+				
+					if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml succeeded."
+
+					fi
+
+				else
+
+					if [ "$send_notifications" -eq 1 ]; then
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed."
+
+					fi
+
+				fi
+
 				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 				touch -d "now" "$backup_location/$vm/$vm.xml"
 
@@ -1302,11 +1354,29 @@ do
 
 						if [ "$send_notifications" -eq 1 ]; then
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup."
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup."
 
 						fi
 
 						rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
+
+						# get rsync result and send notification
+						if [[ $? -eq 0 ]]; then
+						
+							if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml succeeded."
+
+							fi
+
+						else
+
+							if [ "$send_notifications" -eq 1 ]; then
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed."
+
+							fi
+
+						fi
 
 						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 						touch -d "now" "$backup_location/$vm/$vm.xml"
@@ -1317,7 +1387,7 @@ do
 					
 							if [ "$send_notifications" -eq 1 ]; then
 
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison."
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison."
 
 							fi
 
@@ -1340,6 +1410,24 @@ do
 				# copy or pretend to copy the xml configuration to the backup location specified by the user.
 				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
 
+				# get rsync result and send notification
+				if [[ $? -eq 0 ]]; then
+				
+					if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml succeeded."
+
+					fi
+
+				else
+
+					if [ "$send_notifications" -eq 1 ]; then
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed."
+
+					fi
+
+				fi
+
 				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 				touch -d "now" "$backup_location/$vm/$timestamp$vm.xml"
 
@@ -1352,11 +1440,29 @@ do
 					
 						if [ "$send_notifications" -eq 1 ]; then
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup."
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: xml backup file is different than source file. retrying backup."
 
 						fi
 
 						rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
+
+						# get rsync result and send notification
+						if [[ $? -eq 0 ]]; then
+						
+							if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml succeeded."
+
+							fi
+
+						else
+
+							if [ "$send_notifications" -eq 1 ]; then
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed."
+
+							fi
+
+						fi
 
 						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 						touch -d "now" "$backup_location/$vm/$timestamp$vm.xml"
@@ -1367,7 +1473,7 @@ do
 
 							if [ "$send_notifications" -eq 1 ]; then
 
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script xml second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison."
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm.xml second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: xml backup file failed second comparison."
 
 							fi
 
@@ -1419,7 +1525,7 @@ do
 
 				if [ "$send_notifications" -eq 1 ]; then
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup."
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no vdisk(s) for $vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: there are no vdisk(s) associated with $vm to backup."
 
 				fi
 
@@ -1444,7 +1550,7 @@ do
 
 						if [ "$send_notifications" -eq 1 ]; then
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no valid vdisk(s)" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping."
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no valid vdisk(s) for $vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: $disk of $vm is not a vdisk. skipping."
 
 						fi
 
@@ -1462,6 +1568,24 @@ do
 						if [ "$rsync_only" -eq 1 ]; then
 
 							rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$new_disk"
+
+							# get rsync result and send notification
+							if [[ $? -eq 0 ]]; then
+							
+								if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $disk to $backup_location/$vm/$new_disk succeeded."
+
+								fi
+
+							else
+
+								if [ "$send_notifications" -eq 1 ]; then
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $disk to $backup_location/$vm/$new_disk failed."
+
+								fi
+
+							fi
 
 						else
 
@@ -1481,11 +1605,29 @@ do
 
 								if [ "$send_notifications" -eq 1 ]; then
 
-									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup."
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup."
 
 								fi
 
 								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$new_disk"
+
+								# get rsync result and send notification
+								if [[ $? -eq 0 ]]; then
+								
+									if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $disk to $backup_location/$vm/$new_disk succeeded."
+
+									fi
+
+								else
+
+									if [ "$send_notifications" -eq 1 ]; then
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $disk to $backup_location/$vm/$new_disk failed."
+
+									fi
+
+								fi
 
 								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 								touch -d "now" "$backup_location/$vm/$new_disk"
@@ -1496,7 +1638,7 @@ do
 
 									if [ "$send_notifications" -eq 1 ]; then
 
-										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison."
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison."
 
 									fi
 
@@ -1523,9 +1665,45 @@ do
 
 								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$timestamp$new_disk"
 
+								# get rsync result and send notification
+								if [[ $? -eq 0 ]]; then
+								
+									if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk succeeded."
+
+									fi
+
+								else
+
+									if [ "$send_notifications" -eq 1 ]; then
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $disk to $backup_location/$vm/$timestamps$new_disk failed."
+
+									fi
+
+								fi
+
 							else
 
 								cp -av --sparse=always "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+								# get cp result and send notification
+								if [[ $? -eq 0 ]]; then
+								
+									if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script copy $vm backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $disk vdisk to $backup_location/$vm/$timestamp$new_disk succeeded."
+
+									fi
+
+								else
+
+									if [ "$send_notifications" -eq 1 ]; then
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script copy $vm backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $disk vdisk to $backup_location/$vm/$timestamp$new_disk failed."
+
+									fi
+
+								fi
 
 							fi
 
@@ -1536,6 +1714,24 @@ do
 
 							# check to see if delta sync is disabled. if so, run cp. if not, continue to rsync delta sync.
 							rsync -av$rsync_dry_run_option --inplace --no-whole-file "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+							# get rsync result and send notification
+							if [[ $? -eq 0 ]]; then
+							
+								if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk succeeded."
+
+								fi
+
+							else
+
+								if [ "$send_notifications" -eq 1 ]; then
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
+
+								fi
+
+							fi
 
 							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 							touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
@@ -1551,11 +1747,29 @@ do
 
 								if [ "$send_notifications" -eq 1 ]; then
 
-									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup."
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk compare failed" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: vdisk backup file is different than source file. attempting slower rsync backup."
 
 								fi
 
 								rsync -av$rsync_dry_run_option --sparse "$disk" "$backup_location/$vm/$timestamp$new_disk"
+
+								# get rsync result and send notification
+								if [[ $? -eq 0 ]]; then
+								
+									if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk succeeded."
+
+									fi
+
+								else
+
+									if [ "$send_notifications" -eq 1 ]; then
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
+
+									fi
+
+								fi
 
 								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
 								touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
@@ -1566,7 +1780,7 @@ do
 
 									if [ "$send_notifications" -eq 1 ]; then
 
-										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script vdisk second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison."
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script $vm vdisk second compare failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: vdisk backup file failed second comparison."
 
 									fi
 
@@ -1614,7 +1828,7 @@ do
 					
 					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm."
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting $vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm."
 
 					fi
 
@@ -1631,7 +1845,7 @@ do
 				
 					if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script not starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm."
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script not starting $vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm."
 
 					fi
 
@@ -1650,7 +1864,7 @@ do
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_backup is $start_vm_after_backup. starting $vm."
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting $vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_backup is $start_vm_after_backup. starting $vm."
 
 				fi
 
@@ -1684,7 +1898,7 @@ do
 
 					if [ "$send_notifications" -eq 1 ]; then
 
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no new image files" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: could not find new image files. backup may have failed. not removing existing tarball."
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script no new image files for $vm" -i "warning" -m `date '+%Y-%m-%d %H:%M'` " warning: could not find new image files. backup may have failed. not removing existing tarball."
 
 					fi
 
@@ -1709,7 +1923,7 @@ do
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm."
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting $vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: vm_original_state is $vm_original_state. starting $vm."
 
 				fi
 
@@ -1726,7 +1940,7 @@ do
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script not starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm."
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script not starting $vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: vm_original_state is $vm_original_state. not starting $vm."
 
 				fi
 
@@ -1739,7 +1953,7 @@ do
 
 		if [ "$send_notifications" -eq 1 ];then
 
-			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: backup of "$vm" to $backup_location/$vm failed."
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "unRAID VM Backup script backup of $vm failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: backup of "$vm" to $backup_location/$vm failed."
 
 		fi
 
@@ -1753,7 +1967,7 @@ do
 				
 				if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_failure is $start_vm_after_failure starting $vm."
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script re-starting $vm" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " action: start_vm_after_failure is $start_vm_after_failure starting $vm."
 
 				fi
 
@@ -1773,7 +1987,7 @@ do
 				
 		if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: backup of "$vm" to $backup_location/$vm completed."
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "unRAID VM Backup script completed $vm backup" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: backup of "$vm" to $backup_location/$vm completed."
 
 		fi
 
@@ -1977,6 +2191,24 @@ if [ "$errors" -eq 1 ]; then
 	echo `date '+%Y-%m-%d %H:%M'` " warning: errors found. creating error log file." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	rsync -av "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
+
+	# get rsync result and send notification
+	if [[ $? -eq 0 ]]; then
+	
+		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error_log" -s "unRAID VM Backup script" -d "unRAID VM Backup script error log create succeeded" -i "normal" -m `date '+%Y-%m-%d %H:%M'` " information: $backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log successfully created."
+
+		fi
+
+	else
+
+		if [ "$send_notifications" -eq 1 ]; then
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error_log" -s "unRAID VM Backup script" -d "unRAID VM Backup script error log create failed" -i "alert" -m `date '+%Y-%m-%d %H:%M'` " failure: $backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log create failed."
+
+		fi
+
+	fi
 
 fi
 
