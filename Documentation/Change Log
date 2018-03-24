@@ -54,3 +54,4 @@
 #  - made rm commands verbose.
 #  - updated notification messages to be more precise.
 #  - updated and fixed script syntax.
+#  - syntax fix: issues with tarball double quotes.
