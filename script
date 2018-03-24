@@ -1307,7 +1307,7 @@ do
 			echo "$(date '+%Y-%m-%d %H:%M') action: actually_copy_files is $actually_copy_files." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 			# check if only one non-timestamped backup is being kept. if so, perform rsync without a timestamp. if not, continue as normal.
-			if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+			if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 			
 				# copy or pretend to copy the xml configuration to the backup location specified by the user.
 				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
@@ -1523,7 +1523,7 @@ do
 
 					# copy or pretend to copy the vdisk to the backup location specified by the user.
 					# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
-					if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+					if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 
 						if [ "$rsync_only" -eq 1 ]; then
 
@@ -1797,7 +1797,7 @@ do
 		if [ "$compress_backups" -eq 1 ]; then
 
 			# check if only one non-timestamped backup is being kept. if so, perform compression without a timestamp. if not, continue as normal.
-			if [ $timestamp_files -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+			if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 
 				# make sure new image files exist before removing existing tarball
 				if [[ -n $(find "$backup_location/$vm/" -type f \( -name "*.img" -or -name "*.qcow2" \) ) ]]; then
@@ -1805,10 +1805,10 @@ do
 					echo "$(date '+%Y-%m-%d %H:%M') information: found new image files. removing existing tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					# remove existing tarball
-					rm "$backup_location/$vm/*.tar.gz"
+					rm "$backup_location/$vm/"*.tar.gz
 
 					# create new compressed tarball with latest backup.
-					tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/*.{xml,img,qcow2}" && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+					tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/"*.{xml,img,qcow2} && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
 
 				else
 
@@ -1825,7 +1825,7 @@ do
 			else
 
 				# create compressed tarball with ALL .xml, .img, and .qcow2 files into one tarball and then remove the source files.
-				tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" "$backup_location/$vm/*.{xml,img,qcow2}" && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+				tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" "$backup_location/$vm/"*.{xml,img,qcow2} && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
 
 			fi
 
@@ -2088,7 +2088,7 @@ if [ "$keep_log_file" -eq 1 ]; then
 		log_files_plus_1=$(($number_of_log_files_to_keep + 1))
 
 		# remove log files that are over the limit.
-		ls -tp $backup_location/$log_file_subfolder*unraid-vmbackup.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
+		ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
 
 	fi
 
