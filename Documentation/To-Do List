@@ -4,4 +4,3 @@
 #  - run through shellcheck.net
 #  - nvram backup
 #  - verify rm output is showing up in normal logs
-#  - make sure deleted logs are being logged and notified

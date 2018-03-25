@@ -2120,7 +2120,23 @@ if [ "$keep_log_file" -eq 1 ]; then
 		log_files_plus_1=$(($number_of_log_files_to_keep + 1))
 
 		# remove log files that are over the limit.
-		ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
+		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			deleted_files=$(ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --)
+
+			if [[ -n $deleted_files ]]; then
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_logs" -s "unRAID VM Backup script" -d "script removing logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+			fi
+
+		else
+
+			ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
+
+		fi
 
 	fi
 
@@ -2141,7 +2157,23 @@ if [ "$keep_error_log_file" -eq 1 ]; then
 		log_files_plus_1=$(($number_of_error_log_files_to_keep + 1))
 
 		# remove error log files that are over the limit.
-		ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
+		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+			deleted_files=$(ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --)
+
+			if [[ -n $deleted_files ]]; then
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_error_logs" -s "unRAID VM Backup script" -d "script removing error logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+			fi
+		
+		else
+
+			ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
+
+		fi
 
 	fi
 
