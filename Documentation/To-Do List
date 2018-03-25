@@ -4,5 +4,4 @@
 #  - run through shellcheck.net
 #  - nvram backup
 #  - verify rm output is showing up in normal logs
-#  - Allow custom log file name header - be sure to sanitize file names
 #  - make sure deleted logs are being logged and notified
