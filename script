@@ -127,12 +127,6 @@ only_send_error_notifications="0"
 
 ###################################################### script start #############################################################
 
-if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_start" -s "unRAID VM Backup script" -d "script starting" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: unRAID VM Backup script is starting. Look for finished message."
-
-fi
-
 # check the name of the script is as it should be. if yes, continue. if no, exit.
 if [ "$me" == "$official_script_name" ]; then
 
@@ -302,6 +296,60 @@ echo "$(date '+%Y-%m-%d %H:%M')" " Start logging to log file."  | tee -a "$backu
 
 #### logging and notifications ####
 
+# check to see if notifications should be sent. if yes, continue. if no, continue. if input invalid, exit.
+if [[ "$send_notifications" =~ ^(0|1)$ ]]; then
+
+	if [ "$send_notifications" -eq 0 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: send_notifications is $send_notifications. notifications will not be sent."
+
+	elif  [ "$send_notifications" -eq 1 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: send_notifications is $send_notifications. notifications will be sent."
+
+	fi
+
+else
+
+	echo "$(date '+%Y-%m-%d %H:%M') failure: send_notifications is $send_notifications. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: send_notifications is $send_notifications. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+# check to see if only error notifications should be sent. if yes, continue. if no, continue. if input invalid, exit.
+if [[ "$only_send_error_notifications" =~ ^(0|1)$ ]]; then
+
+	if [ "$only_send_error_notifications" -eq 0 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: only_send_error_notifications is $only_send_error_notifications. normal notifications will be sent if send_notifications is enabled."
+
+	elif  [ "$only_send_error_notifications" -eq 1 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: only_send_error_notifications is $only_send_error_notifications. only error notifications will be sent if send_notifications is enabled."
+
+	fi
+
+else
+
+	echo "$(date '+%Y-%m-%d %H:%M') failure: only_send_error_notifications is $only_send_error_notifications. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: only_send_error_notifications is $only_send_error_notifications. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	exit 1
+
+fi
+
+# notify user that script has started.
+if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_start" -s "unRAID VM Backup script" -d "script starting" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: unRAID VM Backup script is starting. Look for finished message."
+
+fi
+
+
 # check to see if log files should be kept. if yes, continue. if no, continue. if input invalid, exit.
 if [[ "$keep_log_file" =~ ^(0|1)$ ]]; then
 
@@ -319,7 +367,11 @@ else
 
 	echo "$(date '+%Y-%m-%d %H:%M') failure: keep_log_file is $keep_log_file. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: keep_log_file is $keep_log_file. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+	if [ "$send_notifications" -eq 1 ]; then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: keep_log_file is $keep_log_file. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
 
 	exit 1
 
@@ -347,32 +399,12 @@ else
 
 	echo "$(date '+%Y-%m-%d %H:%M') failure: number_of_log_files_to_keep is $number_of_log_files_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: number_of_log_files_to_keep is $number_of_log_files_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
+	if [ "$send_notifications" -eq 1 ]; then
 
-	exit 1
-
-fi
-
-
-# check to see if notifications should be sent. if yes, continue. if no, continue. if input invalid, exit.
-if [[ "$send_notifications" =~ ^(0|1)$ ]]; then
-
-	if [ "$send_notifications" -eq 0 ]; then
-
-		echo "$(date '+%Y-%m-%d %H:%M') information: send_notifications is $send_notifications. notifications will not be sent."
-
-	elif  [ "$send_notifications" -eq 1 ]; then
-
-		echo "$(date '+%Y-%m-%d %H:%M') information: send_notifications is $send_notifications. notifications will be sent."
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: number_of_log_files_to_keep is $number_of_log_files_to_keep. this is not a valid format. expecting a number between [0 - 1000000]. exiting."
 
 	fi
-
-else
-
-	echo "$(date '+%Y-%m-%d %H:%M') failure: send_notifications is $send_notifications. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-	/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: send_notifications is $send_notifications. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
-
+	
 	exit 1
 
 fi
