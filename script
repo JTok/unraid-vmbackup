@@ -68,7 +68,7 @@ keep_log_file="1"
 # default is 1. number of successful log files to keep. 0 means infinitely.
 number_of_log_files_to_keep="1"
 
-# default is "logs". set to "" to put in root of backups folder.
+# default is "logs". set to "" to put in root of backups folder. set to "logs/<subfolder>" to keep logs separate if running multipe versions of this script.
 log_file_subfolder="logs"
 
 # default is 1. set to 0 to prevent notification system from being used. Script failures that occur before logging can start, and before this variable is validated will still be sent.
