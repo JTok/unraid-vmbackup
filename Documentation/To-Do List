@@ -2,5 +2,4 @@
 #  - create script to update scripts. will need ability to skip update if it will break functionality of existing scripts. plus ability to keep existing user variables.
 #  - possible to make into a plugin?
 #  - run through shellcheck.net
-#  - nvram backup
 #  - verify rm output is showing up in normal logs
