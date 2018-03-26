@@ -36,6 +36,26 @@
 #  - added option to only use rsync.
 #  - dry-runs can now be used with the rsync_only option.
 #  - added dates to logging.
-#  - creates logs in backup folder.
-#  - creates error logs backup folder.
+#  - creates log files in backup folder.
+#  - creates error log files in backup folder.
 #  - log messages pushed through unRAID notification system by default.
+
+# v1.1.2 - 2018/03/26
+#  The Land Before Time 4: how many are there anyway?
+#
+#  - updated readme.
+#  - added option to only receive error notifications.
+#  - fixed issue where not all failures were using notification system.
+#  - fixed issue where not all warnings were using notification system.
+#  - fixed send_notifications not being able to disable most notifications.
+#  - added detailed notification option.
+#  - detailed notifications: sends notifications when vm backups are started and stopped.
+#  - detailed notifications: sends notifications when old backups are deleted.
+#  - detailed notifications: sends notifications when old log files are deleted.
+#  - made rm commands verbose.
+#  - updated notification messages to be more precise.
+#  - updated and fixed script syntax.
+#  - fixed issues with tarball backups not removing original files.
+#  - added option to backup nvram files. enabled by default.
+#  - added detailed logging for tarballs.
+#  - fixed issue where rm didn't always get logged to the log file.

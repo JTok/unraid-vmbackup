@@ -4,15 +4,15 @@ Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-tec
 
 Currently the script is in a relatively stable state, and most of the features have been implemented. I have tested them as well as I can, but I cannot guarantee they will work correctly for everyone, so be sure to test thoroughly on your system before depending on this script for backups. Please review the Change Log and To-Do List if you would like to know more.
 
-v1.1.1 - 2018/03/18
+v1.1.2 - 2018/03/26
 
 ## Installation
 
-- Add the script to the CA User Scripts plugin.
+- Add the script and description files to the CA User Scripts plugin. No other files are necessary to make the script work.
 
-- Set the variables.
+- Set the variables in the script file.
 
-- Choose a schedule.
+- Choose a schedule in the CA User Scripts plugin.
 
 ### Script options
 
@@ -46,6 +46,14 @@ v1.1.1 - 2018/03/18
 
 - Option to log messages through unRAID notification system.
 
+  - Option to only receive error notifications
+
+  - Option to receive detailed notifications.
+
+    - sends notifications when vm backups are started and stopped.
+
+    - sends notifications when old backups are deleted.
+
 #### Additional options
 
 - Option to compress backups.
@@ -59,6 +67,8 @@ v1.1.1 - 2018/03/18
 - Advanced: Option to compare files and retry backup in the event of failure.
 
 - Advanced: Option to skip backing up xml configuration.
+
+- Advanced: Option to skip backing up nvram.
 
 - Advanced: Option to skip backing up vdisks.
 
