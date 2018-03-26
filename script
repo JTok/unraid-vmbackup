@@ -237,7 +237,7 @@ fi
 # check log folder for trailing slash. add if missing.
 length=${#log_file_subfolder}
 
-last_char=${log_file_subfolder:length-1:1}
+last_char=${log_file_subfolder:$length-1:1}
 
 [[ $last_char != "/" ]] && log_file_subfolder="$log_file_subfolder/"; :
 
