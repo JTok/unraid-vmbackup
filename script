@@ -967,6 +967,12 @@ else
 fi
 
 
+echo "$(date '+%Y-%m-%d %H:%M') information: started attempt to backup $vms_to_backup to $backup_location" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+# set this to force the for loop to split on new lines and not spaces.
+IFS=$'\n'
+
+
 # loop through the vms in the list and try and back up thier associated xml configurations and vdisk(s).
 for vm in $vms_to_backup
 
