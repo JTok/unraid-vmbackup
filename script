@@ -58,7 +58,6 @@ compress_backups="0"
 # default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
 timestamp_files="1"
 
-
 #### logging and notifications ####
 
 # default is 1. set to 0 to have log file deleted after the backup has completed.
@@ -244,12 +243,12 @@ last_char=${log_file_subfolder:length-1:1}
 
 
 # create the log file subfolder for storing log files.
-if [ ! -d $backup_location/$log_file_subfolder ] ; then
+if [ ! -d "$backup_location/$log_file_subfolder" ] ; then
 
 	echo "$(date '+%Y-%m-%d %H:%M') action: $backup_location/$log_file_subfolder does not exist. creating it."
 
 	# make the directory as it doesn't exist. added -v option to give a confirmation message to command line.
-	mkdir -vp $backup_location/$log_file_subfolder
+	mkdir -vp "$backup_location/$log_file_subfolder"
 
 else
 
@@ -1040,7 +1039,7 @@ do
 	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
 
 		# get the list of the vdisks associated with the vm and address them one by one.
-		vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
+		vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v '\-\-\-\-\-' | awk -F" {2,}" '{print $4}')
 
 
 		# check for the header in vdisks to see if there are any disks
@@ -1093,7 +1092,15 @@ do
 				fi
 				
 				# get the most recent vdisk file.
-				newest_vdisk_file=$(ls -tp "$backup_location/$vm/"*.{img,qcow2} | grep -v '/$' | sed -n 1p)
+				unset -v newest_vdisk_file
+
+				for diskimage in "$backup_location/$vm/"*.{img,qcow2}
+
+				do
+
+					[[ $diskimage -nt $newest_vdisk_file ]] && newest_vdisk_file=$diskimage
+
+				done
 
 				# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
 				if [ -f "$newest_vdisk_file" ]; then
@@ -1202,7 +1209,7 @@ do
 		echo "$(date '+%Y-%m-%d %H:%M') information: performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to shutdown cleanly" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		# the shutdown of the vm may last a while so we are going to check periodically based on global input variables.
-		for (( i=1; i<=$clean_shutdown_checks; i++ ))
+		for (( i=1; i<=clean_shutdown_checks; i++ ))
 
 		do
 
@@ -1715,7 +1722,7 @@ do
 		if [ "$backup_vdisks" -eq 1 ]; then
 
 			# get the list of the vdisks associated with the vm and address them one by one.
-			vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v "\-\-\-\-\-" | awk -F" {2,}" '{print $4}')
+			vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v '\-\-\-\-\-' | awk -F" {2,}" '{print $4}')
 
 
 			# check for the header in vdisks to see if there are any disks
@@ -1853,7 +1860,7 @@ do
 
 									if [ "$send_notifications" -eq 1 ]; then
 
-										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm vdisk backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamps$new_disk failed."
+										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm vdisk backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
 
 									fi
 
@@ -2149,7 +2156,7 @@ do
 	fi
 
 	# check to see how many days backups should be kept.
-	if [ $number_of_days_to_keep_backups -eq 0 ]; then
+	if [ "$number_of_days_to_keep_backups" -eq 0 ]; then
 	
 		echo "$(date '+%Y-%m-%d %H:%M') information: nubmer of days to keep backups set to indefinitely." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
@@ -2164,18 +2171,18 @@ do
 		fi
 
 		# create variable equal to number_of_days_to_keep_backups plus one to make sure that there are files younger than the cutoff date.
-		days_plus_1=$(($number_of_days_to_keep_backups + 1))
+		days_plus_1=$((number_of_days_to_keep_backups + 1))
 
 		for j in $backup_location/$vm/
 
 		do
 
 			# remove old xml files.
-			if [[ -n $(find "$j" -type f \( -name "*.xml" \) -mmin -$(($days_plus_1*24*60))) ]]; then
+			if [[ -n $(find "$j" -type f \( -name "*.xml" \) -mmin -$((days_plus_1*24*60))) ]]; then
 
 				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					deleted_files=$(find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+					deleted_files=$(find "$j" -type f \( -name "*.xml" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
 					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2183,18 +2190,18 @@ do
 
 				else
 
-					find "$j" -type f \( -name "*.xml" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name "*.xml" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 				fi
 
 			fi
 
 			# remove old nvram files.
-			if [[ -n $(find "$j" -type f \( -name "*.fd" \) -mmin -$(($days_plus_1*24*60))) ]]; then
+			if [[ -n $(find "$j" -type f \( -name "*.fd" \) -mmin -$((days_plus_1*24*60))) ]]; then
 
 				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					deleted_files=$(find "$j" -type f \( -name "*.fd" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+					deleted_files=$(find "$j" -type f \( -name "*.fd" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
 					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2202,18 +2209,18 @@ do
 
 				else
 
-					find "$j" -type f \( -name "*.fd" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name "*.fd" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 				fi
 
 			fi
 
 			# remove old vdisk files.
-			if [[ -n $(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin -$(($days_plus_1*24*60))) ]]; then
+			if [[ -n $(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin -$((days_plus_1*24*60))) ]]; then
 
 				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					deleted_files=$(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+					deleted_files=$(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
 					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2221,18 +2228,18 @@ do
 
 				else
 				
-					find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 				
 				fi
 
 			fi
 
 			# remove old tarballs.
-			if [[ -n $(find "$j" -type f \( -name "*.tar.gz" \) -mmin -$(($days_plus_1*24*60))) ]]; then
+			if [[ -n $(find "$j" -type f \( -name "*.tar.gz" \) -mmin -$((days_plus_1*24*60))) ]]; then
 				
 				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					deleted_files=$(find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+					deleted_files=$(find "$j" -type f \( -name "*.tar.gz" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
 					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2240,7 +2247,7 @@ do
 
 				else
 
-					find "$j" -type f \( -name "*.tar.gz" \) -mmin +$(($number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name "*.tar.gz" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
 
 				fi
 
@@ -2251,7 +2258,7 @@ do
 	fi
 
 	# check to see how many backups should be kept.
-	if [ $number_of_backups_to_keep -eq 0 ]; then
+	if [ "$number_of_backups_to_keep" -eq 0 ]; then
 	
 		echo "$(date '+%Y-%m-%d %H:%M') information: number of backups to keep set to infinite." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
@@ -2266,12 +2273,12 @@ do
 		fi
 
 		# create variable equal to number_of_backups_to_keep plus one to make sure that the correct number of files are kept.
-		backups_plus_1=$(($number_of_backups_to_keep + 1))
+		backups_plus_1=$((number_of_backups_to_keep + 1))
 		
 		# remove xml files that are over the limit.
 		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(ls -tp "$backup_location/$vm/"*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n $deleted_files ]]; then
 			
@@ -2283,14 +2290,14 @@ do
 
 		else
 
-			ls -tp "$backup_location/$vm/"*.xml | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+			find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
 		
 		fi
 
 		# remove nvram files that are over the limit.
 		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(ls -tp "$backup_location/$vm/"*.fd | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n $deleted_files ]]; then
 			
@@ -2302,14 +2309,14 @@ do
 
 		else
 
-			ls -tp "$backup_location/$vm/"*.fd | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+			find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
 		
 		fi
 
 		# remove image files that are over the limit.
 		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(ls -tp "$backup_location/$vm/"*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n $deleted_files ]]; then
 			
@@ -2321,14 +2328,14 @@ do
 
 		else
 
-			ls -tp "$backup_location/$vm/"*.{img,qcow2} | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+			find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
 
 		fi
 
 		# remove tar.gz files that are over the limit.
 		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(ls -tp "$backup_location/$vm/"*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n $deleted_files ]]; then
 			
@@ -2340,7 +2347,7 @@ do
 
 		else
 
-			ls -tp "$backup_location/$vm/"*.tar.gz | grep -v '/$' | tail -n +$backups_plus_1 | xargs -d '\n' -r rm -fv --
+			find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
 
 		fi
 
@@ -2354,7 +2361,7 @@ echo "$(date '+%Y-%m-%d %H:%M') information: finished attempt to backup $vms_to_
 # check to see if log file should be kept.
 if [ "$keep_log_file" -eq 1 ]; then
 
-	if [ $number_of_log_files_to_keep -eq 0 ]; then
+	if [ "$number_of_log_files_to_keep" -eq 0 ]; then
 	
 		echo "$(date '+%Y-%m-%d %H:%M') information: number of logs to keep set to infinite." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
@@ -2363,12 +2370,12 @@ if [ "$keep_log_file" -eq 1 ]; then
 		echo "$(date '+%Y-%m-%d %H:%M') information: cleaning out logs over $number_of_log_files_to_keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		# create variable equal to number_of_log_files_to_keep plus one to make sure that the correct number of files are kept.
-		log_files_plus_1=$(($number_of_log_files_to_keep + 1))
+		log_files_plus_1=$((number_of_log_files_to_keep + 1))
 
 		# remove log files that are over the limit.
 		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --)
+			deleted_files=$(find "$backup_location/$log_file_subfolder"*unraid-vmbackup.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n $deleted_files ]]; then
 
@@ -2380,7 +2387,7 @@ if [ "$keep_log_file" -eq 1 ]; then
 
 		else
 
-			ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
+			find "$backup_location/$log_file_subfolder"*unraid-vmbackup.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
 
 		fi
 
@@ -2400,12 +2407,12 @@ if [ "$keep_error_log_file" -eq 1 ]; then
 		echo "$(date '+%Y-%m-%d %H:%M') information: cleaning out error logs over $number_of_error_log_files_to_keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		# create variable equal to number_of_error_log_files_to_keep plus one to make sure that the correct number of files are kept.
-		log_files_plus_1=$(($number_of_error_log_files_to_keep + 1))
+		error_log_files_plus_1=$((number_of_error_log_files_to_keep + 1))
 
 		# remove error log files that are over the limit.
 		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --)
+			deleted_files=$(find "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$error_log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n $deleted_files ]]; then
 
@@ -2417,7 +2424,7 @@ if [ "$keep_error_log_file" -eq 1 ]; then
 		
 		else
 
-			ls -tp "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log | grep -v '/$' | tail -n +$log_files_plus_1 | xargs -d '\n' -r rm --
+			find "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$error_log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
 
 		fi
 
