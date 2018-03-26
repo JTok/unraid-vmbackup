@@ -1557,164 +1557,173 @@ do
 			# delete the local copy of the xml configuration.
 			rm "$vm.xml"
 
-			# check if only one non-timestamped backup is being kept. if so, perform rsync without a timestamp. if not, continue as normal.
-			if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
-			
-				# copy or pretend to copy the xml configuration to the backup location specified by the user.
-				rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$nvram_filename"
+			# check to see if nvram_path is empty.
+			if [ -z "$nvram_path" ]; then
 
-				# get rsync result and send notification
-				if [[ $? -eq 1 ]]; then
+				echo "$(date '+%Y-%m-%d %H:%M') information: $vm does not appear to have an nvram file. skipping." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					if [ "$send_notifications" -eq 1 ]; then
+			else
 
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed."
+				# check if only one non-timestamped backup is being kept. if so, perform rsync without a timestamp. if not, continue as normal.
+				if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+				
+					# copy or pretend to copy the xml configuration to the backup location specified by the user.
+					rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$nvram_filename"
 
-					fi
-
-				fi
-
-				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
-				touch -d "now" "$backup_location/$vm/$nvram_filename"
-
-				# check to see if compare_files is enabled. if yes, check for xml differences.
-				if [ "$compare_files" -eq 1 ]; then
-
-					if ! cmp -s "$nvram_path" "$backup_location/$vm/$nvram_filename"; then
-
-						echo "$(date '+%Y-%m-%d %H:%M') warning: $vm nvram backup file is different than source file. retrying backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+					# get rsync result and send notification
+					if [[ $? -eq 1 ]]; then
 
 						if [ "$send_notifications" -eq 1 ]; then
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram compare failed" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: nvram backup file is different than source file. retrying backup."
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed."
 
 						fi
 
-						rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$nvram_filename"
+					fi
 
-						# get rsync result and send notification
-						if [[ $? -eq 1 ]]; then
+					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+					touch -d "now" "$backup_location/$vm/$nvram_filename"
 
-							if [ "$send_notifications" -eq 1 ]; then
-
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed."
-
-							fi
-
-						fi
-
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
-						touch -d "now" "$backup_location/$vm/$nvram_filename"
+					# check to see if compare_files is enabled. if yes, check for xml differences.
+					if [ "$compare_files" -eq 1 ]; then
 
 						if ! cmp -s "$nvram_path" "$backup_location/$vm/$nvram_filename"; then
 
-							echo "$(date '+%Y-%m-%d %H:%M') failure: $vm nvram backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-					
+							echo "$(date '+%Y-%m-%d %H:%M') warning: $vm nvram backup file is different than source file. retrying backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 							if [ "$send_notifications" -eq 1 ]; then
 
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram second compare failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: nvram backup file failed second comparison."
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram compare failed" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: nvram backup file is different than source file. retrying backup."
+
+							fi
+
+							rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$nvram_filename"
+
+							# get rsync result and send notification
+							if [[ $? -eq 1 ]]; then
+
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed."
+
+								fi
+
+							fi
+
+							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							touch -d "now" "$backup_location/$vm/$nvram_filename"
+
+							if ! cmp -s "$nvram_path" "$backup_location/$vm/$nvram_filename"; then
+
+								echo "$(date '+%Y-%m-%d %H:%M') failure: $vm nvram backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+						
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram second compare failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: nvram backup file failed second comparison."
+
+								fi
+
+							else
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file passed second comparison. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 							fi
 
 						else
 
-							echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file passed second comparison. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+							echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file matches source file. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 						fi
 
-					else
-
-						echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file matches source file. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
 					fi
 
-				fi
+				else
+				
+					# copy or pretend to copy the xml configuration to the backup location specified by the user.
+					rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"
 
-			else
-			
-				# copy or pretend to copy the xml configuration to the backup location specified by the user.
-				rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"
+					# get rsync result and send notification
+					if [[ $? -eq 1 ]]; then
 
-				# get rsync result and send notification
-				if [[ $? -eq 1 ]]; then
-
-					if [ "$send_notifications" -eq 1 ]; then
-
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed."
-
-					fi
-
-				fi
-
-				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
-				touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
-
-				# check to see if compare_files is enabled. if yes, check for xml differences.
-				if [ "$compare_files" -eq 1 ]; then
-
-					if ! cmp -s "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"; then
-
-						echo "$(date '+%Y-%m-%d %H:%M') warning: $vm nvram backup file is different than source file. retrying backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-					
 						if [ "$send_notifications" -eq 1 ]; then
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram compare failed" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: nvram backup file is different than source file. retrying backup."
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed."
 
 						fi
 
-						rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"
+					fi
 
-						# get rsync result and send notification
-						if [[ $? -eq 1 ]]; then
+					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+					touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
 
-							if [ "$send_notifications" -eq 1 ]; then
-
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed."
-
-							fi
-
-						fi
-
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
-						touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
+					# check to see if compare_files is enabled. if yes, check for xml differences.
+					if [ "$compare_files" -eq 1 ]; then
 
 						if ! cmp -s "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"; then
 
-							echo "$(date '+%Y-%m-%d %H:%M') failure: $vm nvram backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
+							echo "$(date '+%Y-%m-%d %H:%M') warning: $vm nvram backup file is different than source file. retrying backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+						
 							if [ "$send_notifications" -eq 1 ]; then
 
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram second compare failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: nvram backup file failed second comparison."
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram compare failed" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: nvram backup file is different than source file. retrying backup."
+
+							fi
+
+							rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"
+
+							# get rsync result and send notification
+							if [[ $? -eq 1 ]]; then
+
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed."
+
+								fi
+
+							fi
+
+							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
+
+							if ! cmp -s "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"; then
+
+								echo "$(date '+%Y-%m-%d %H:%M') failure: $vm nvram backup file failed second comparison." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram second compare failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: nvram backup file failed second comparison."
+
+								fi
+
+							else
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file passed second comparison. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 							fi
 
 						else
 
-							echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file passed second comparison. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+							echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file matches source file. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 						fi
-
-					else
-
-						echo "$(date '+%Y-%m-%d %H:%M') information: $vm nvram backup file matches source file. moving on." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					fi
 
 				fi
 
+				# send a message to the user based on whether there was an actual copy or a dry-run.
+				if [ "$actually_copy_files" -eq 0 ]; then
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: dry-run backup of $vm nvram to $backup_location/$vm/$timestamp$nvram_filename complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				else
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: backup of $vm nvram to $backup_location/$vm/$timestamp$nvram_filename complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				fi
+
 			fi
-
-			# send a message to the user based on whether there was an actual copy or a dry-run.
-			if [ "$actually_copy_files" -eq 0 ]; then
-
-				echo "$(date '+%Y-%m-%d %H:%M') information: dry-run backup of $vm nvram to $backup_location/$vm/$timestamp$nvram_filename complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-			else
-
-				echo "$(date '+%Y-%m-%d %H:%M') information: backup of $vm nvram to $backup_location/$vm/$timestamp$nvram_filename complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-			fi
-			
+						
 		fi
 
 
