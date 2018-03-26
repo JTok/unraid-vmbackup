@@ -68,6 +68,8 @@ v1.1.2 - 2018/03/26
 
 - Advanced: Option to skip backing up xml configuration.
 
+- Advanced: Option to skip backing up nvram.
+
 - Advanced: Option to skip backing up vdisks.
 
 - Advanced: Choose the number of times to check if a VM is shut down.

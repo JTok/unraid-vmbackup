@@ -55,7 +55,7 @@
 #  - made rm commands verbose.
 #  - updated notification messages to be more precise.
 #  - updated and fixed script syntax.
-#  - syntax fix: issues with tarball double quotes.
+#  - fixed issues with tarball backups not removing original files.
 #  - added option to backup nvram files. enabled by default.
 #  - added detailed logging for tarballs.
 #  - fixed issue where rm didn't always get logged to the log file.
