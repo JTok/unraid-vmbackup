@@ -1359,7 +1359,7 @@ do
 	# check whether to backup the vm or not.
 	if [[ "$can_backup_vm" == "y" ]]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') action: can_backup_vm flag is $can_backup_vm. starting backup of $vm xml configuration and vdisk(s)." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		echo "$(date '+%Y-%m-%d %H:%M') action: can_backup_vm flag is $can_backup_vm. starting backup of $vm configuration, nvram, and vdisk(s)." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		if [ "$detailed_notifications" -eq 1 ]; then
 			
@@ -2058,10 +2058,20 @@ do
 					echo "$(date '+%Y-%m-%d %H:%M') information: found new image files. removing existing tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					# remove existing tarball
-					rm "$backup_location/$vm/"*.tar.gz
+					rm -fv "$backup_location/$vm/"*.tar.gz | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					# create new compressed tarball with latest backup.
-					tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/"*.{xml,fd,img,qcow2} && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+					
+					echo "$(date '+%Y-%m-%d %H:%M') information: started creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+					tar zcvSf "$backup_location/$vm/$vm.tar.gz" "$backup_location/$vm/"*.{xml,fd,img,qcow2}
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: finished creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					
+					# remove xml, nvram, and image files.
+					find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.fd" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -fv {} \;
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: removing xml, nvram, and image files after tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				else
 
@@ -2077,8 +2087,18 @@ do
 
 			else
 
-				# create compressed tarball with ALL .xml, .img, and .qcow2 files into one tarball and then remove the source files.
-				tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" "$backup_location/$vm/"*.{xml,fd,img,qcow2} && find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -f {} \;
+				# create compressed tarball with ALL xml, nvram, and image files.
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: started creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" "$backup_location/$vm/"*.{xml,fd,img,qcow2}
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: finished creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				
+				# remove xml, nvram, and image files.
+				find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.fd" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -fv {} \;
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: removing xml, nvram, and image files after tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 			fi
 
@@ -2193,7 +2213,7 @@ do
 
 					deleted_files=$(find "$j" -type f \( -name "*.xml" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "script removing xmls" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2212,7 +2232,7 @@ do
 
 					deleted_files=$(find "$j" -type f \( -name "*.fd" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_nvrams" -s "unRAID VM Backup script" -d "script removing nvrams" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2231,7 +2251,7 @@ do
 
 					deleted_files=$(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2250,7 +2270,7 @@ do
 
 					deleted_files=$(find "$j" -type f \( -name "*.tar.gz" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "script removing tarballs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2289,9 +2309,9 @@ do
 
 			deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
-			if [[ -n $deleted_files ]]; then
+			if [[ -n "$deleted_files" ]]; then
 			
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "script removing xmls" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2299,8 +2319,14 @@ do
 
 		else
 
-			find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
-		
+			deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+			if [[ -n "$deleted_files" ]]; then
+			
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			fi
+
 		fi
 
 		# remove nvram files that are over the limit.
@@ -2308,9 +2334,9 @@ do
 
 			deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
-			if [[ -n $deleted_files ]]; then
+			if [[ -n "$deleted_files" ]]; then
 			
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_nvrams" -s "unRAID VM Backup script" -d "script removing nvrams" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2318,7 +2344,13 @@ do
 
 		else
 
-			find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
+			deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+			if [[ -n "$deleted_files" ]]; then
+			
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			fi
 		
 		fi
 
@@ -2327,9 +2359,9 @@ do
 
 			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
-			if [[ -n $deleted_files ]]; then
+			if [[ -n "$deleted_files" ]]; then
 			
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2337,7 +2369,13 @@ do
 
 		else
 
-			find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
+			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+			if [[ -n "$deleted_files" ]]; then
+			
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			fi
 
 		fi
 
@@ -2346,9 +2384,9 @@ do
 
 			deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
-			if [[ -n $deleted_files ]]; then
+			if [[ -n "$deleted_files" ]]; then
 			
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "script removing tarballs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2356,7 +2394,13 @@ do
 
 		else
 
-			find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
+			deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+			if [[ -n "$deleted_files" ]]; then
+			
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			fi
 
 		fi
 
@@ -2386,9 +2430,9 @@ if [ "$keep_log_file" -eq 1 ]; then
 
 			deleted_files=$(find "$backup_location/$log_file_subfolder"*unraid-vmbackup.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
-			if [[ -n $deleted_files ]]; then
+			if [[ -n "$deleted_files" ]]; then
 
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_logs" -s "unRAID VM Backup script" -d "script removing logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2396,7 +2440,13 @@ if [ "$keep_log_file" -eq 1 ]; then
 
 		else
 
-			find "$backup_location/$log_file_subfolder"*unraid-vmbackup.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
+			deleted_files=$(find "$backup_location/$log_file_subfolder"*unraid-vmbackup.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+			if [[ -n "$deleted_files" ]]; then
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			fi
 
 		fi
 
@@ -2423,9 +2473,9 @@ if [ "$keep_error_log_file" -eq 1 ]; then
 
 			deleted_files=$(find "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$error_log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
-			if [[ -n $deleted_files ]]; then
+			if [[ -n "$deleted_files" ]]; then
 
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_error_logs" -s "unRAID VM Backup script" -d "script removing error logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
@@ -2433,7 +2483,13 @@ if [ "$keep_error_log_file" -eq 1 ]; then
 		
 		else
 
-			find "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$error_log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --
+			deleted_files=$(find "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$error_log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+			if [[ -n "$deleted_files" ]]; then
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			fi
 
 		fi
 
@@ -2468,13 +2524,13 @@ if [ "$keep_log_file" -eq 0 ]; then
 	
 		echo "$(date '+%Y-%m-%d %H:%M') warning: removing log file." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
 
-		rm "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		rm -fv "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	else
 
 		echo "$(date '+%Y-%m-%d %H:%M') warning: removing log file."
 
-		rm "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		rm -fv "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	fi
 
@@ -2487,17 +2543,31 @@ if [ "$keep_error_log_file" -eq 0 ]; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') warning: removing error log file." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-		rm "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
+		rm -fv "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
 
 	else
 
 		echo "$(date '+%Y-%m-%d %H:%M') warning: removing error log file."
 
-		rm "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
+		rm -fv "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
 
 	fi
 
 fi
+
+### Logging Stopped ###
+if [ "$keep_log_file" -eq 1 ]; then
+
+	echo "$(date '+%Y-%m-%d %H:%M')" " Stop logging to log file."  | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+fi
+
+if [ "$errors" -eq 1 ] && [ "$keep_error_log_file" -eq 1 ]; then
+
+	echo "$(date '+%Y-%m-%d %H:%M')" " Stop logging to log file."  | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
+
+fi
+
 
 if [ "$send_notifications" -eq 1 ]; then
 
