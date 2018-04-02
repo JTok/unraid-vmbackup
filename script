@@ -1,6 +1,7 @@
 #!/bin/bash
 #backgroundOnly=true
 #arrayStarted=true
+#noParity=true
 
 # v1.1.2 - 2018/03/26
 

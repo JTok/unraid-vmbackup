@@ -59,3 +59,7 @@
 #  - added option to backup nvram files. enabled by default.
 #  - added detailed logging for tarballs.
 #  - fixed issue where rm didn't always get logged to the log file.
+
+# v1.1.3 - testing
+#
+#  - included inline variable to prevent script from running if a parity check is in progress.
