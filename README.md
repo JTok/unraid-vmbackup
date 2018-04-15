@@ -72,6 +72,8 @@ v1.1.2 - 2018/03/26
 
 - Advanced: Option to skip backing up vdisks.
 
+- Advanced: Option to ignore iso files when checking for valid vdisks.
+
 - Advanced: Choose the number of times to check if a VM is shut down.
 
 - Advanced: Choose the number of seconds to wait between checks to see if a VM is shut down.
