@@ -66,3 +66,4 @@
 #  - fixed spelling errors in script.
 #  - added advanced option to ignore iso files during vdisk check.
 #  - fixed so tarballs so files are added without full paths.
+#  - updated user selectable options so that they only generate a warning in the log, not a full error log file.

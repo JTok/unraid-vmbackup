@@ -483,13 +483,13 @@ if [[ "$number_of_days_to_keep_backups" =~ ^[0-9]+$ ]]; then
 
 		else
 
-			echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is potentially an insufficient number of days to keep your backups." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+			echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is potentially an insufficient number of days to keep your backups." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		fi
 
 	elif [ "$number_of_days_to_keep_backups" -gt 180 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is a long time to keep your backups." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is a long time to keep your backups." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$number_of_days_to_keep_backups" -ge 5 ] && [ "$number_of_days_to_keep_backups" -le 180 ]; then
 
@@ -523,13 +523,13 @@ if [[ "$number_of_backups_to_keep" =~ ^[0-9]+$ ]]; then
 
 		else
 
-			echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_backups_to_keep is $number_of_backups_to_keep. this is potentially an insufficient number of backups to keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+			echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_backups_to_keep is $number_of_backups_to_keep. this is potentially an insufficient number of backups to keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		fi
 
 	elif [ "$number_of_backups_to_keep" -gt 40 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_backups_to_keep is $number_of_backups_to_keep. this is a lot of backups to keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_backups_to_keep is $number_of_backups_to_keep. this is a lot of backups to keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$number_of_backups_to_keep" -ge 2 ] && [ "$number_of_backups_to_keep" -le 40 ]; then
 
@@ -615,7 +615,7 @@ if [[ "$backup_xml" =~ ^(0|1)$ ]]; then
 
 	if [ "$backup_xml" -eq 0 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: backup_xml is $backup_xml. vms will not have their xml configurations backed up." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: backup_xml is $backup_xml. vms will not have their xml configurations backed up." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$backup_xml" -eq 1 ]; then
 
@@ -643,7 +643,7 @@ if [[ "$backup_nvram" =~ ^(0|1)$ ]]; then
 
 	if [ "$backup_nvram" -eq 0 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: backup_nvram is $backup_nvram. vms will not have their nvram backed up." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: backup_nvram is $backup_nvram. vms will not have their nvram backed up." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$backup_nvram" -eq 1 ]; then
 
@@ -671,7 +671,7 @@ if [[ "$backup_vdisks" =~ ^(0|1)$ ]]; then
 
 	if [ "$backup_vdisks" -eq 0 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: backup_vdisks is $backup_vdisks. vms will not have their vdisks backed up. compression will be set to off." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: backup_vdisks is $backup_vdisks. vms will not have their vdisks backed up. compression will be set to off." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		compress_backups="0"
 
@@ -843,7 +843,7 @@ if [[ "$actually_copy_files" =~ ^(0|1)$ ]]; then
 
 	if [ "$actually_copy_files" -eq 0 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: actually_copy_files flag is $actually_copy_files. no files will be copied." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: actually_copy_files flag is $actually_copy_files. no files will be copied if using rsync only mode." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		# create a variable which tells rsync to do a dry-run.
 		rsync_dry_run_option="n"
@@ -874,11 +874,11 @@ if [[ "$clean_shutdown_checks" =~ ^[0-9]+$ ]]; then
 
 	if [ "$clean_shutdown_checks" -lt 5 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: clean_shutdown_checks is $clean_shutdown_checks. this is potentially an insufficient number of shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: clean_shutdown_checks is $clean_shutdown_checks. this is potentially an insufficient number of shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$clean_shutdown_checks" -gt 50 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: clean_shutdown_checks is $clean_shutdown_checks. this is a vast number of shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: clean_shutdown_checks is $clean_shutdown_checks. this is a vast number of shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$clean_shutdown_checks" -ge 5 ] && [ "$clean_shutdown_checks" -le 50 ]; then
 
@@ -906,11 +906,11 @@ if [[ "$seconds_to_wait" =~ ^[0-9]+$ ]]; then
 
 	if [ "$seconds_to_wait" -lt 30 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: seconds_to_wait is $seconds_to_wait. this is potentially an insufficient number of seconds to wait between shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: seconds_to_wait is $seconds_to_wait. this is potentially an insufficient number of seconds to wait between shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$seconds_to_wait" -gt 600 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') warning: seconds_to_wait is $seconds_to_wait. this is a vast number of seconds to wait between shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') warning: seconds_to_wait is $seconds_to_wait. this is a vast number of seconds to wait between shutdown checks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	elif [ "$seconds_to_wait" -ge 30 ] && [ "$seconds_to_wait" -le 600 ]; then
 
@@ -972,7 +972,7 @@ if [[ "$number_of_error_log_files_to_keep" =~ ^[0-9]+$ ]]; then
 
 		else
 
-			echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_error_log_files_to_keep is $number_of_error_log_files_to_keep. this is potentially an insufficient number of error log files to keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+			echo "$(date '+%Y-%m-%d %H:%M') warning: number_of_error_log_files_to_keep is $number_of_error_log_files_to_keep. this is potentially an insufficient number of error log files to keep." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		fi
 
