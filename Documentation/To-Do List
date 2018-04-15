@@ -2,5 +2,4 @@
 #  - create script to update scripts. will need ability to skip update if it will break functionality of existing scripts. plus ability to keep existing user variables.
 #  - possible to make into a plugin?
 #  - create tarball without path.
-#  - option to ignore iso files as vdisks.
 #  - review which user options will cause an error log to be generated.
