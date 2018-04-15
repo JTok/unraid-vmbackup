@@ -65,3 +65,4 @@
 #  - included inline variable to prevent script from running if a parity check is in progress.
 #  - fixed spelling errors in script.
 #  - added advanced option to ignore iso files during vdisk check.
+#  - fixed so tarballs so files are added without full paths.
