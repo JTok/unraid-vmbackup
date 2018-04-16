@@ -703,8 +703,6 @@ if [[ "$ignore_isos" =~ ^(0|1)$ ]]; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') information: ignore_isos is $ignore_isos. iso files will not be ignored when checking vdisks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-		compress_backups="0"
-
 	elif [ "$ignore_isos" -eq 1 ]; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') information: ignore_isos is $ignore_isos. iso files will be ignored when checking vdisks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
