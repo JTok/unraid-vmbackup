@@ -2118,7 +2118,7 @@ do
 					
 					echo "$(date '+%Y-%m-%d %H:%M') information: started creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					tar zcvSf "$backup_location/$vm/$vm.tar.gz" -C "$backup_location/$vm/" -- *.{xml,fd,img,qcow2}
+					cd "$backup_location/$vm/" && tar zcvSf "$backup_location/$vm/$vm.tar.gz" -C "$backup_location/$vm/" -- *.{xml,fd,img,qcow2}
 
 					echo "$(date '+%Y-%m-%d %H:%M') information: finished creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 					
@@ -2145,7 +2145,7 @@ do
 
 				echo "$(date '+%Y-%m-%d %H:%M') information: started creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-				tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" -C "$backup_location/$vm/" -- *.{xml,fd,img,qcow2}
+				cd "$backup_location/$vm/" && tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" -- *.{xml,fd,img,qcow2}
 
 				echo "$(date '+%Y-%m-%d %H:%M') information: finished creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 				
