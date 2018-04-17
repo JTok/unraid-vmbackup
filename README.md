@@ -4,7 +4,7 @@ Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-tec
 
 Currently the script is in a relatively stable state, and most of the features have been implemented. I have tested them as well as I can, but I cannot guarantee they will work correctly for everyone, so be sure to test thoroughly on your system before depending on this script for backups. Please review the Change Log and To-Do List if you would like to know more.
 
-v1.1.2 - 2018/03/26
+v1.1.3 - 2018/04/16
 
 ## Installation
 

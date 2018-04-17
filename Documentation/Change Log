@@ -60,7 +60,8 @@
 #  - added detailed logging for tarballs.
 #  - fixed issue where rm didn't always get logged to the log file.
 
-# v1.1.3 - TESTING
+# v1.1.3 - 2018/04/16
+#  From Here to Infirmary
 #
 #  - included inline variable to prevent script from running if a parity check is in progress.
 #  - fixed spelling errors in script.
