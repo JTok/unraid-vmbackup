@@ -1,5 +1,5 @@
 ## To-Do List ##
 #  - create script to update scripts. will need ability to skip update if it will break functionality of existing scripts. plus ability to keep existing user variables.
 #  - possible to make into a plugin?
-#  - fix vdisks to skip.
 #  - add option to enable turbo write during backups.
+#  - vdisk1 copying to vdisk2??

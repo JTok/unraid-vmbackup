@@ -1102,13 +1102,20 @@ do
 			if [ ! "$disk" == "Source" ]; then
 
 				# check to see if disk should be skipped.
-				if [[ "$vdisks_to_skip" == "$disk" ]]; then
-				
-					echo "$(date '+%Y-%m-%d %H:%M') information: $disk for $vm was found in vdisks_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				skip_disk="0"
+				for skipvdisk_name in $vdisks_to_skip
 
-					continue
+				do
 
-				fi
+					if [ "$skipvdisk_name" == "$disk" ]; then
+
+						skip_disk="1"
+
+						echo "$(date '+%Y-%m-%d %H:%M') information: $disk for $vm was found in vdisks_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+					fi
+
+				done
 
 				# get the filename of the disk without the path.
 				new_disk=$(basename "$disk")
@@ -1137,81 +1144,85 @@ do
 
 				fi
 				
-				# get the most recent vdisk file.
-				unset -v newest_vdisk_file
+				if [ "$skip_disk" -ne 1 ]; then
 
-				for diskimage in "$backup_location/$vm/"*.{img,qcow2}
+					# get the most recent vdisk file.
+					unset -v newest_vdisk_file
 
-				do
+					for diskimage in "$backup_location/$vm/"*.{img,qcow2}
 
-					[[ $diskimage -nt $newest_vdisk_file ]] && newest_vdisk_file=$diskimage
+					do
 
-				done
+						[[ $diskimage -nt $newest_vdisk_file ]] && newest_vdisk_file=$diskimage
 
-				# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
-				if [ -f "$newest_vdisk_file" ]; then
+					done
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					# check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
+					if [ -f "$newest_vdisk_file" ]; then
 
-					if [ "$detailed_notifications" -eq 1 ]; then
-						
-						if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "script starting copy $vm backup" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting."
-
-						fi
-
-					fi
-
-					if [ "$rsync_only" -eq 1 ]; then
-					
-						rsync -av$rsync_dry_run_option --sparse "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
-
-						# get rsync result and send notification
-						if [[ $? -eq 1 ]]; then
-
-							if [ "$send_notifications" -eq 1 ]; then
-
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
-
-							fi
-
-						fi
-
-					else
-
-						cp -av --sparse=always "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
-
-						# get cp result and send notification
-						if [[ $? -eq 1 ]]; then
-
-							if [ "$send_notifications" -eq 1 ]; then
-
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
-
-							fi
-
-						fi
-
-					fi
-
-					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
-					touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
-
-					# send a message to the user based on whether there was an actual copy or a dry-run.
-					if [ "$actually_copy_files" -eq 0 ]; then
-
-						echo "$(date '+%Y-%m-%d %H:%M') information: dry-run copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-					else
-
-						echo "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+						echo "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 						if [ "$detailed_notifications" -eq 1 ]; then
 							
 							if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "script completed copy $vm backup" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "script starting copy $vm backup" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting."
+
+							fi
+
+						fi
+
+						if [ "$rsync_only" -eq 1 ]; then
+						
+							rsync -av$rsync_dry_run_option --sparse "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
+
+							# get rsync result and send notification
+							if [[ $? -eq 1 ]]; then
+
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
+
+								fi
+
+							fi
+
+						else
+
+							cp -av --sparse=always "$newest_vdisk_file" "$backup_location/$vm/$timestamp$new_disk"
+
+							# get cp result and send notification
+							if [[ $? -eq 1 ]]; then
+
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
+
+								fi
+
+							fi
+
+						fi
+
+						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+						touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
+
+						# send a message to the user based on whether there was an actual copy or a dry-run.
+						if [ "$actually_copy_files" -eq 0 ]; then
+
+							echo "$(date '+%Y-%m-%d %H:%M') information: dry-run copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+						else
+
+							echo "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							if [ "$detailed_notifications" -eq 1 ]; then
+								
+								if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "script completed copy $vm backup" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+
+								fi
 
 							fi
 
