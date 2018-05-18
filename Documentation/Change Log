@@ -73,3 +73,4 @@
 #  A rose by any other name
 #
 #  - fixed vdisks not being skipped.
+#  - fixed incorrect copying when using delta sync with multiple vdisks.
