@@ -60,6 +60,7 @@ compress_backups="0"
 # default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
 timestamp_files="1"
 
+
 #### logging and notifications ####
 
 # default is 1. set to 0 to have log file deleted after the backup has completed.
@@ -80,6 +81,10 @@ detailed_notifications="0"
 
 
 #### advanced variables ####
+
+# default is 0. set to 1 to have reconstruct write (a.k.a. turbo write) enabled during the backup and then disabled after the backup completes.
+# NOTE: may break auto functionality when it is implemented. do not use if reconstruct write is already enabled. backups may run faster with this enabled.
+enable_reconstruct_write="0"
 
 # default is 0. set this to 1 to compare files after copy and run rsync in the event of failure. could add significant amount of time depending on the size of vms.
 compare_files="0"
@@ -583,6 +588,34 @@ fi
 
 #### advanced variables ####
 
+# check to see if reconstruct write should be enabled during backup. if yes, continue. if no, continue. if input invalid, exit.
+if [[ "$enable_reconstruct_write" =~ ^(0|1)$ ]]; then
+
+	if [ "$enable_reconstruct_write" -eq 0 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: enable_reconstruct_write is $enable_reconstruct_write. reconstruct write will not be enabled by this script." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+	elif [ "$enable_reconstruct_write" -eq 1 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: enable_reconstruct_write is $enable_reconstruct_write. reconstruct write will be enabled during the backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+	fi
+
+else
+
+	echo "$(date '+%Y-%m-%d %H:%M') failure: enable_reconstruct_write is $enable_reconstruct_write. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: enable_reconstruct_write is $enable_reconstruct_write. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
+
+	exit 1
+
+fi
+
+
 # check to see if files should be compared after backup. if yes, continue. if no, continue. if input invalid, exit.
 if [[ "$compare_files" =~ ^(0|1)$ ]]; then
 
@@ -1005,6 +1038,14 @@ echo "$(date '+%Y-%m-%d %H:%M') information: started attempt to backup $vms_to_b
 # set this to force the for loop to split on new lines and not spaces.
 IFS=$'\n'
 
+
+# check to see if reconstruct write should be enabled by this script. if so, enable and continue.
+if [ "$enable_reconstruct_write" -eq 1 ]; then
+
+	/usr/local/sbin/mdcmd set md_write_method 1
+	echo "$(date '+%Y-%m-%d %H:%M') information: Reconstruct write enabled." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+fi
 
 # loop through the vms in the list and try and back up their associated xml configurations and vdisk(s).
 for vm in $vms_to_backup
@@ -2556,6 +2597,15 @@ do
 done
 
 echo "$(date '+%Y-%m-%d %H:%M') information: finished attempt to backup $vms_to_backup to $backup_location." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+
+# check to see if reconstruct write was enabled by this script. if so, disable and continue.
+if [ "$enable_reconstruct_write" -eq 1 ]; then
+
+	/usr/local/sbin/mdcmd set md_write_method 0
+	echo "$(date '+%Y-%m-%d %H:%M') information: Reconstruct write disabled." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+fi
 
 
 # check to see if log file should be kept.

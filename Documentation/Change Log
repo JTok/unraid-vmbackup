@@ -75,3 +75,4 @@
 #  - fixed vdisks not being skipped.
 #  - fixed incorrect copying when using delta sync with multiple vdisks.
 #  - fixed number of vdisks being kept when VM has multiple vdisks.
+#  - added option to enable reconstruct write during backups.

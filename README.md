@@ -64,6 +64,8 @@ v1.1.4 - TESTING
 
 - Option to only use rsync.
 
+- Advanced: Option to enable reconstruct write during backups.
+
 - Advanced: Option to compare files and retry backup in the event of failure.
 
 - Advanced: Option to skip backing up xml configuration.
