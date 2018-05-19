@@ -50,6 +50,7 @@ set_vm_to_original_state="1"
 number_of_days_to_keep_backups="0"
 
 # default is 0. set this to the number of backups that should be kept. 0 means infinitely.
+# WARNING: If VM has multiple vdisks, then they must end in sequential numbers in order to be correctly backed up (i.e. vdisk1.img, vdisk2.img, etc.).
 number_of_backups_to_keep="0"
 
 # default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
@@ -1123,7 +1124,7 @@ do
 				# get the disk number and extension
 				unset -v disk_number
 
-				vdisknameregex="[0-9]+\.(img|qcow2)"
+				vdisknameregex="[0-9]+\\.(img|qcow2)"
 
 				if [[ $disk =~ $vdisknameregex ]]; then
 
@@ -1172,7 +1173,7 @@ do
 					shopt -s extglob
 
 					# get the most recent vdisk file.
-					for diskimage in "$backup_location/$vm/"*$disk_number
+					for diskimage in "$backup_location/$vm/"*"$disk_number"
 
 					do
 
@@ -2468,9 +2469,42 @@ do
 		fi
 
 		# remove image files that are over the limit.
+		# get number of vdisks
+		numberofvdisks="1"
+		vdisknumberextregex="[0-9]+\\.(img|qcow2)"
+		vdisknumberonlyregex="[0-9]+"
+
+		for imagefilename in "$backup_location/$vm/"*.{img,qcow2}
+
+		do
+
+			# get highest number from vdisk count
+			if [[ $imagefilename =~ $vdisknumberextregex ]]; then
+
+				imagefilenamenumberext=${BASH_REMATCH[0]}
+				
+				if [[ $imagefilenamenumberext =~ $vdisknumberonlyregex ]]; then
+
+					vdisk_numberonly=${BASH_REMATCH[0]}
+
+				fi
+
+			fi
+
+			if [ "$numberofvdisks" -lt "$vdisk_numberonly" ]; then
+
+				numberofvdisks="$vdisk_numberonly"
+
+			fi
+
+		done
+
+		# create variable equal to number_of_backups_to_keep, times the number of vdisks, plus one; to make sure that the correct number of files are kept.
+		vdiskbackups_plus_1=$(((number_of_backups_to_keep * numberofvdisks) + 1))
+
 		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
@@ -2482,7 +2516,7 @@ do
 
 		else
 
-			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
