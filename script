@@ -2735,7 +2735,7 @@ if [ "$errors" -eq 1 ]; then
 	# get rsync result and send notification
 	if [[ $? -eq 1 ]]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') failure: $backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log create failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		echo "$(date '+%Y-%m-%d %H:%M') failure: $backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log create failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		if [ "$send_notifications" -eq 1 ]; then
 
