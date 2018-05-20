@@ -1,10 +1,15 @@
 # unraid-vmbackup
 
+v1.1.5 - TESTING
+
 Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-technology.com/forums/topic/48286-plugin-ca-user-scripts/ "CA User Scripts") for more information.
 
 Currently the script is in a relatively stable state, and most of the features have been implemented. I have tested them as well as I can, but I cannot guarantee they will work correctly for everyone, so be sure to test thoroughly on your system before depending on this script for backups. Please review the Change Log and To-Do List if you would like to know more.
 
-v1.1.4 - 2018/05/19
+## Important
+
+The virtual disks attached to a single VM must have unique names regardless of their location since during the backup they will be placed into the same folder.
+i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img since the vdisks will overwrite the each other during the backup. However, VM1 and VM2 can both have a vdisk1.img since they will be backed up to different folders.
 
 ## Installation
 

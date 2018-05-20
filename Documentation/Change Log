@@ -76,3 +76,10 @@
 #  - fixed incorrect copying when using delta sync with multiple vdisks.
 #  - fixed number of vdisks being kept when VM has multiple vdisks.
 #  - added option to enable reconstruct write during backups.
+
+# v1.1.5 - testing
+#  In Loving Memory of Net Neutrality
+#
+#  - fixed some errors not generating an error log file.
+#  - updated comments.
+#  - updated documentation to include important information.

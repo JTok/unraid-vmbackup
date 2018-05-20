@@ -3,7 +3,7 @@
 #arrayStarted=true
 #noParity=true
 
-# v1.1.4 - 2018/05/19
+# v1.1.5 - TESTING
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -1077,7 +1077,7 @@ do
 	done
 
 
-	# if the skip flag was set in the previous section then we have to exit and move onto the next vm in the list.
+	# if the skip flag was set in the previous section then we have to exit and move on to the next vm in the list.
 	if [ "$skip_vm" == "y" ]; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') warning: $vm can not be found on the system. skipping vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
@@ -1247,6 +1247,8 @@ do
 							# get rsync result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								 echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -1262,6 +1264,8 @@ do
 							# get cp result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -1272,7 +1276,7 @@ do
 
 						fi
 
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+						# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 						touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 						# send a message to the user based on whether there was an actual copy or a dry-run.
@@ -1484,6 +1488,7 @@ do
 	# check whether to backup the vm or not.
 	if [[ "$can_backup_vm" == "y" ]]; then
 
+		# start backing up vm configuration, nvram, and snapshots.
 		echo "$(date '+%Y-%m-%d %H:%M') action: can_backup_vm flag is $can_backup_vm. starting backup of $vm configuration, nvram, and vdisk(s)." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		if [ "$detailed_notifications" -eq 1 ]; then
@@ -1511,6 +1516,8 @@ do
 				# get rsync result and send notification
 				if [[ $? -eq 1 ]]; then
 
+					echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 					if [ "$send_notifications" -eq 1 ]; then
 
 						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm.xml backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed."
@@ -1519,7 +1526,7 @@ do
 
 				fi
 
-				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+				# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 				touch -d "now" "$backup_location/$vm/$vm.xml"
 
 				# check to see if compare_files is enabled. if yes, check for xml differences.
@@ -1540,6 +1547,8 @@ do
 						# get rsync result and send notification
 						if [[ $? -eq 1 ]]; then
 
+							echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 							if [ "$send_notifications" -eq 1 ]; then
 
 								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm.xml backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed."
@@ -1548,7 +1557,7 @@ do
 
 						fi
 
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+						# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 						touch -d "now" "$backup_location/$vm/$vm.xml"
 
 						if ! cmp -s "$vm.xml" "$backup_location/$vm/$vm.xml"; then
@@ -1583,6 +1592,8 @@ do
 				# get rsync result and send notification
 				if [[ $? -eq 1 ]]; then
 
+					echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 					if [ "$send_notifications" -eq 1 ]; then
 
 						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm.xml backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed."
@@ -1591,7 +1602,7 @@ do
 
 				fi
 
-				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+				# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 				touch -d "now" "$backup_location/$vm/$timestamp$vm.xml"
 
 				# check to see if compare_files is enabled. if yes, check for xml differences.
@@ -1612,6 +1623,8 @@ do
 						# get rsync result and send notification
 						if [[ $? -eq 1 ]]; then
 
+							echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 							if [ "$send_notifications" -eq 1 ]; then
 
 								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm.xml backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed."
@@ -1620,7 +1633,7 @@ do
 
 						fi
 
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+						# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 						touch -d "now" "$backup_location/$vm/$timestamp$vm.xml"
 
 						if ! cmp -s "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"; then
@@ -1698,6 +1711,8 @@ do
 					# get rsync result and send notification
 					if [[ $? -eq 1 ]]; then
 
+						echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 						if [ "$send_notifications" -eq 1 ]; then
 
 							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed."
@@ -1706,7 +1721,7 @@ do
 
 					fi
 
-					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+					# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 					touch -d "now" "$backup_location/$vm/$nvram_filename"
 
 					# check to see if compare_files is enabled. if yes, check for xml differences.
@@ -1727,6 +1742,8 @@ do
 							# get rsync result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed."
@@ -1735,7 +1752,7 @@ do
 
 							fi
 
-							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 							touch -d "now" "$backup_location/$vm/$nvram_filename"
 
 							if ! cmp -s "$nvram_path" "$backup_location/$vm/$nvram_filename"; then
@@ -1770,6 +1787,8 @@ do
 					# get rsync result and send notification
 					if [[ $? -eq 1 ]]; then
 
+						echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 						if [ "$send_notifications" -eq 1 ]; then
 
 							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed."
@@ -1778,7 +1797,7 @@ do
 
 					fi
 
-					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+					# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 					touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
 
 					# check to see if compare_files is enabled. if yes, check for xml differences.
@@ -1799,6 +1818,8 @@ do
 							# get rsync result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed."
@@ -1807,7 +1828,7 @@ do
 
 							fi
 
-							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 							touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
 
 							if ! cmp -s "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"; then
@@ -1937,6 +1958,8 @@ do
 								# get rsync result and send notification
 								if [[ $? -eq 1 ]]; then
 
+									echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 									if [ "$send_notifications" -eq 1 ]; then
 
 										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm vdisk backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$new_disk failed."
@@ -1951,7 +1974,7 @@ do
 
 							fi
 
-							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 							touch -d "now" "$backup_location/$vm/$new_disk"
 
 							# check to see if compare_files is enabled. if yes, check for vdisk differences.
@@ -1971,6 +1994,8 @@ do
 
 									# get rsync result and send notification
 									if [[ $? -eq 1 ]]; then
+									
+										echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 										if [ "$send_notifications" -eq 1 ]; then
 
@@ -1980,7 +2005,7 @@ do
 
 									fi
 
-									# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+									# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 									touch -d "now" "$backup_location/$vm/$new_disk"
 
 									if ! cmp -s "$disk" "$backup_location/$vm/$new_disk"; then
@@ -2020,6 +2045,8 @@ do
 									# get rsync result and send notification
 									if [[ $? -eq 1 ]]; then
 
+										echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 										if [ "$send_notifications" -eq 1 ]; then
 
 											/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm vdisk backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -2035,9 +2062,11 @@ do
 									# get cp result and send notification
 									if [[ $? -eq 1 ]]; then
 
+										echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 										if [ "$send_notifications" -eq 1 ]; then
 										
-											/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk vdisk to $backup_location/$vm/$timestamp$new_disk failed."
+											/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
 
 										fi
 
@@ -2045,7 +2074,7 @@ do
 
 								fi
 
-								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+								# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 								touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 							else
@@ -2056,6 +2085,8 @@ do
 								# get rsync result and send notification
 								if [[ $? -eq 1 ]]; then
 
+									echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 									if [ "$send_notifications" -eq 1 ]; then
 
 										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm vdisk backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -2064,7 +2095,7 @@ do
 
 								fi
 
-								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+								# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 								touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 							fi
@@ -2095,7 +2126,7 @@ do
 
 									fi
 
-									# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+									# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 									touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 									if ! cmp -s "$disk" "$backup_location/$vm/$timestamp$new_disk"; then
@@ -2703,6 +2734,8 @@ if [ "$errors" -eq 1 ]; then
 
 	# get rsync result and send notification
 	if [[ $? -eq 1 ]]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') failure: $backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log create failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 		if [ "$send_notifications" -eq 1 ]; then
 
