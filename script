@@ -34,6 +34,11 @@ vm1
 vm2
 "
 
+# list of domains that will be backed up WITHOUT first shutting down separated by a new line. NOTE: These must also be listed in vms_to_backup.
+vms_to_backup_running="
+vm2
+"
+
 # list of specific vdisks to be skipped. use the full path.
 vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk2.img
@@ -1321,59 +1326,91 @@ do
 
 	fi
 
+	# initialize skip_vm_shutdown variable as false.
+	skip_vm_shutdown=false
 
-	# if the vm is running try and shut it down.
-	if [ "$vm_state" == "running" ]; then
+	# determine if vm should be kept running.
+	for vm_to_keep_running in $vms_to_backup_running
+	do
 
-		echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. shutting down." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		if [[ "$vm_to_keep_running" == "$vm" ]]; then
+			skip_vm_shutdown=true
+		fi
 
-		# attempt to cleanly shutdown the vm.
-		virsh shutdown "$vm"
+	done
 
-		echo "$(date '+%Y-%m-%d %H:%M') information: performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to shutdown cleanly" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+	if [ $skip_vm_shutdown = false ]; then
 
-		# the shutdown of the vm may last a while so we are going to check periodically based on global input variables.
-		for (( i=1; i<=clean_shutdown_checks; i++ ))
+		echo "$(date '+%Y-%m-%d %H:%M') information: skip_vm_shutdown is false. beginning vm shutdown procedure." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-		do
+		# if the vm is running try and shut it down.
+		if [ "$vm_state" == "running" ]; then
 
-			echo "$(date '+%Y-%m-%d %H:%M') information: cycle $i of $clean_shutdown_checks: waiting $seconds_to_wait seconds before checking if the vm has shutdown" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+			echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. shutting down." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			# wait x seconds based on how many seconds the user wants to wait between checks for a clean shutdown.
-			sleep $seconds_to_wait
+			# attempt to cleanly shutdown the vm.
+			virsh shutdown "$vm"
 
-			# get the state of the vm.
-			vm_state=$(virsh domstate "$vm")
+			echo "$(date '+%Y-%m-%d %H:%M') information: performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to shutdown cleanly" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			# if the vm is running decide what to do.
-			if [ "$vm_state" == "running" ]; then
+			# the shutdown of the vm may last a while so we are going to check periodically based on global input variables.
+			for (( i=1; i<=clean_shutdown_checks; i++ ))
 
-				echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+			do
 
-				# if we have already exhausted our wait time set by the script variables then its time to do something else.
-				if [ $i = "$clean_shutdown_checks" ] ; then
+				echo "$(date '+%Y-%m-%d %H:%M') information: cycle $i of $clean_shutdown_checks: waiting $seconds_to_wait seconds before checking if the vm has shutdown" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					# check if the user wants to kill the vm on failure of unclean shutdown.
-					if [ "$kill_vm_if_cant_shutdown" -eq 1 ]; then
+				# wait x seconds based on how many seconds the user wants to wait between checks for a clean shutdown.
+				sleep $seconds_to_wait
 
-						echo "$(date '+%Y-%m-%d %H:%M') action: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. killing vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				# get the state of the vm.
+				vm_state=$(virsh domstate "$vm")
 
-						# destroy vm, based on testing this should be instant and without failure.
-						virsh destroy "$vm"
+				# if the vm is running decide what to do.
+				if [ "$vm_state" == "running" ]; then
 
-						# get the state of the vm.
-						vm_state=$(virsh domstate "$vm")
+					echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-						# if the vm is shut off then proceed or give up.
-						if [ "$vm_state" == "shut off" ]; then
+					# if we have already exhausted our wait time set by the script variables then its time to do something else.
+					if [ $i = "$clean_shutdown_checks" ] ; then
 
-							# set a flag to check later to indicate whether to backup this vm or not.
-							can_backup_vm="y"
+						# check if the user wants to kill the vm on failure of unclean shutdown.
+						if [ "$kill_vm_if_cant_shutdown" -eq 1 ]; then
 
-							echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+							echo "$(date '+%Y-%m-%d %H:%M') action: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. killing vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-							break
+							# destroy vm, based on testing this should be instant and without failure.
+							virsh destroy "$vm"
 
+							# get the state of the vm.
+							vm_state=$(virsh domstate "$vm")
+
+							# if the vm is shut off then proceed or give up.
+							if [ "$vm_state" == "shut off" ]; then
+
+								# set a flag to check later to indicate whether to backup this vm or not.
+								can_backup_vm="y"
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+								break
+
+							else
+
+								# set a flag to check later to indicate whether to backup this vm or not.
+								can_backup_vm="n"
+
+								echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+								if [ "$send_notifications" -eq 1 ];then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M')" "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+								fi
+
+							fi
+
+						# if the user doesn't want to force a shutdown then there is nothing more to do so i cannot backup the vm.
 						else
 
 							# set a flag to check later to indicate whether to backup this vm or not.
@@ -1383,96 +1420,87 @@ do
 
 							if [ "$send_notifications" -eq 1 ];then
 
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M')" "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
 							fi
 
 						fi
 
-					# if the user doesn't want to force a shutdown then there is nothing more to do so i cannot backup the vm.
-					else
+					fi
 
-						# set a flag to check later to indicate whether to backup this vm or not.
-						can_backup_vm="n"
+				# if the vm is shut off then go onto backing it up.
+				elif [ "$vm_state" == "shut off" ]; then
 
-						echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+					# set a flag to check later to indicate whether to backup this vm or not.
+					can_backup_vm="y"
 
-						if [ "$send_notifications" -eq 1 ];then
+					echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+					break
 
-						fi
+				# if the vm is in a state that is not explicitly defined then do nothing as it is unknown how to handle it.
+				else
+
+					# set a flag to check later to indicate whether to backup this vm or not.
+					can_backup_vm="n"
+
+					echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+					if [ "$send_notifications" -eq 1 ];then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
 					fi
 
 				fi
 
-			# if the vm is shut off then go onto backing it up.
-			elif [ "$vm_state" == "shut off" ]; then
+			done
 
-				# set a flag to check later to indicate whether to backup this vm or not.
-				can_backup_vm="y"
 
-				echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		# if the vm is shut off then go straight onto backing it up.
+		elif [ "$vm_state" == "shut off" ]; then
 
-				break
+			# set a flag to check later to indicate whether to backup this vm or not.
+			can_backup_vm="y"
 
-			# if the vm is in a state that is not explicitly defined then do nothing as it is unknown how to handle it.
-			else
+			echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-				# set a flag to check later to indicate whether to backup this vm or not.
-				can_backup_vm="n"
 
-				echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		# if the vm is suspended then something went wrong with the attempt to recover it earlier so do not attempt to backup.
+		elif [ "$vm_state" == "suspended" ]; then
 
-				if [ "$send_notifications" -eq 1 ];then
+			# set a flag to check later to indicate whether to backup this vm or not.
+			can_backup_vm="n"
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+			echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-				fi
+			if [ "$send_notifications" -eq 1 ];then
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
 			fi
 
-		done
 
+		# if the vm is in a state that has not been explicitly defined then do nothing as it is unknown how to handle it.
+		else
 
-	# if the vm is shut off then go straight onto backing it up.
-	elif [ "$vm_state" == "shut off" ]; then
+			# set a flag to check later to indicate whether to backup this vm or not.
+			can_backup_vm="n"
 
-		# set a flag to check later to indicate whether to backup this vm or not.
-		can_backup_vm="y"
+			echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-		echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+			if [ "$send_notifications" -eq 1 ];then
 
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
-	# if the vm is suspended then something went wrong with the attempt to recover it earlier so do not attempt to backup.
-	elif [ "$vm_state" == "suspended" ]; then
-
-		# set a flag to check later to indicate whether to backup this vm or not.
-		can_backup_vm="n"
-
-		echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-		if [ "$send_notifications" -eq 1 ];then
-
-			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+			fi
 
 		fi
 
-
-	# if the vm is in a state that has not been explicitly defined then do nothing as it is unknown how to handle it.
 	else
 
-		# set a flag to check later to indicate whether to backup this vm or not.
-		can_backup_vm="n"
-
-		echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-		if [ "$send_notifications" -eq 1 ];then
-
-			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
-
-		fi
+		can_backup_vm="y"
+		echo "$(date '+%Y-%m-%d %H:%M') information: skip_vm_shutdown is true. skipping vm shutdown procedure. $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	fi
 
