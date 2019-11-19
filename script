@@ -1155,6 +1155,10 @@ do
 				# get the extension of the disk.
 				disk_extension="${disk##*.}"
 
+				# disable case matching
+				shopt -s nocasematch
+
+
 				# check to see if vdisk should be skipped by extension.
 				for skipvdisk_extension in $vdisk_extensions_to_skip
 
@@ -1169,6 +1173,9 @@ do
 					fi
 
 				done
+
+				# re-enable case matching
+				shopt -u nocasematch
 
 				# get the filename of the disk without the path.
 				new_disk=$(basename "$disk")
@@ -1930,6 +1937,9 @@ do
 					# get the extension of the disk.
 					disk_extension="${disk##*.}"
 
+					# disable case matching
+					shopt -s nocasematch
+
 					# check to see if vdisk should be skipped by extension.
 					for skipvdisk_extension in $vdisk_extensions_to_skip
 
@@ -1944,6 +1954,9 @@ do
 						fi
 
 					done
+
+					# re-enable case matching
+					shopt -u nocasematch
 
 					# get the filename of the disk without the path.
 					new_disk=$(basename "$disk")

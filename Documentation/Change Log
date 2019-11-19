@@ -8,7 +8,7 @@
 #  - updated documentation to include important information.
 #  - reverse changelog order.
 #  - added support for more vdisk extensions by parsing them directly from the config.
-#  - added user variable for blacklisting extensions.
+#  - added user variable (case-insensitive) for blacklisting extensions.
 #  - fixed issue with where files would not be removed after compressing when config files were not set to be backed up.
 #  - updated comments to use more consistent terms.
 
