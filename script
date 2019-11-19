@@ -28,15 +28,16 @@ enabled="0"
 # backup location to put vdisks.
 backup_location="/mnt/user/share/backup_folder/"
 
-# list of domains that will be backed up separated by a new line.
+# list of vms that will be backed up separated by a new line.
 vms_to_backup="
 vm1
 vm2
 "
 
-# list of domains that will be backed up WITHOUT first shutting down separated by a new line. NOTE: These must also be listed in vms_to_backup.
+# list of vms that will be backed up WITHOUT first shutting down separated by a new line. These must also be listed in vms_to_backup.
+# NOTE: vms backed up via snapshot will not be shutdown (see use_snapshots option).
+# WARNING: using this setting can result in an unusable backup. recommend to not use.
 vms_to_backup_running="
-vm2
 "
 
 # list of specific vdisks to be skipped. use the full path.
@@ -49,6 +50,10 @@ vdisks_to_skip="
 vdisk_extensions_to_skip="
 iso
 "
+
+# use snapshots to backup vms.
+# NOTE: vms that are backed up using snapshots will not be shutdown. if a vm is already shutdown the default backup method will be used.
+use_snapshots="1"
 
 # default is 0. set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
 kill_vm_if_cant_shutdown="0"
@@ -428,6 +433,32 @@ else
 
 fi
 
+# check to see if snapshots should be used. if yes, continue. if no, continue. if input invalid, exit.
+if [[ "$use_snapshots" =~ ^(0|1)$ ]]; then
+
+	if [ "$use_snapshots" -eq 0 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: use_snapshots is $use_snapshots. vms will not be backed up using snapshots." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+	elif [ "$use_snapshots" -eq 1 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: use_snapshots is $use_snapshots. vms will be backed up using snapshots if possible." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+	fi
+
+else
+
+	echo "$(date '+%Y-%m-%d %H:%M') failure: use_snapshots is $use_snapshots. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: use_snapshots is $use_snapshots. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
+
+	exit 1
+
+fi
 
 # check to see if vm should be killed if clean shutdown fails. if yes, continue. if no, continue. if input invalid, exit.
 if [[ "$kill_vm_if_cant_shutdown" =~ ^(0|1)$ ]]; then
@@ -1160,7 +1191,7 @@ do
 				# get the extension of the disk.
 				disk_extension="${disk##*.}"
 
-				# disable case matching
+				# disable case matching.
 				shopt -s nocasematch
 
 
@@ -1179,7 +1210,7 @@ do
 
 				done
 
-				# re-enable case matching
+				# re-enable case matching.
 				shopt -u nocasematch
 
 				# get the filename of the disk without the path.
@@ -1316,16 +1347,6 @@ do
 	# get the state of the vm for putting the VM in it's original state after backing up.
 	vm_original_state=$vm_state
 
-	# resume the vm if it is suspended, based on testing this should be instant but will trap later if it has not resumed.
-	if [ "$vm_state" == "paused" ]; then
-
-		echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. resuming." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-		# resume the vm.
-		virsh resume "$vm"
-
-	fi
-
 	# initialize skip_vm_shutdown variable as false.
 	skip_vm_shutdown=false
 
@@ -1342,6 +1363,16 @@ do
 	if [ $skip_vm_shutdown = false ]; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') information: skip_vm_shutdown is false. beginning vm shutdown procedure." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+		# resume the vm if it is suspended, based on testing this should be instant but will trap later if it has not resumed.
+		if [ "$vm_state" == "paused" ]; then
+
+			echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. resuming." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			# resume the vm.
+			virsh resume "$vm"
+
+		fi
 
 		# if the vm is running try and shut it down.
 		if [ "$vm_state" == "running" ]; then
@@ -1908,19 +1939,35 @@ do
 			# unset variable for vdisks.
 			unset -v vdisks
 
-			# get vdisk paths from config file.
+			# unset dictionary for vdisk_types.
+			unset vdisk_types
+			#initailize vdisk_types as dictionary.
+			declare -A vdisk_types
+
+			# unset dictionary for vdisk_types.
+			unset vdisk_specs
+			#initailize vdisk_types as dictionary.
+			declare -A vdisk_specs
+
+			# get vdisk paths, types, and specs from config file.
 			for (( i=1; i<=vdisk_count; i++ ))
 			
 			do
 			
-				vdisks="$vdisks $(xmllint --xpath "string(/domain/devices/disk[$i]/source/@file)" "$vm.xml")"
+				vdisk_path="$(xmllint --xpath "string(/domain/devices/disk[$i]/source/@file)" "$vm.xml")"
+				vdisk_type="$(xmllint --xpath "string(/domain/devices/disk[$i]/driver/@type)" "$vm.xml")"
+				vdisk_spec="$(xmllint --xpath "string(/domain/devices/disk[$i]/target/@dev)" "$vm.xml")"
+
+				vdisks="$vdisks $vdisk_path"
+				vdisk_types["$vdisk_path"]="$vdisk_type"
+				vdisk_specs["$vdisk_path"]="$vdisk_spec"
 			
 			done
 
 			# delete the working copy of the config.
 			rm "$vm.xml"
 
-			# check for the header in vdisks to see if there are any disks
+			# check vdisks variable to see if there are any disks
 			if [ "$vdisks" == "" ]; then
 
 				echo "$(date '+%Y-%m-%d %H:%M') warning: there are no vdisk(s) associated with $vm to backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
@@ -1965,7 +2012,7 @@ do
 					# get the extension of the disk.
 					disk_extension="${disk##*.}"
 
-					# disable case matching
+					# disable case matching.
 					shopt -s nocasematch
 
 					# check to see if vdisk should be skipped by extension.
@@ -1983,7 +2030,7 @@ do
 
 					done
 
-					# re-enable case matching
+					# re-enable case matching.
 					shopt -u nocasematch
 
 					# get the filename of the disk without the path.
@@ -2017,6 +2064,79 @@ do
 							vdisk_extensions+=("$disk_extension")
 
 						fi
+
+						# initialize variable for qcow2 disk as false.
+						is_qcow2_disk=false
+
+						if [ "${vdisk_types[$disk]}" == "qcow2" ]; then
+
+							is_qcow2_disk=true
+
+						fi
+
+						# check to see if snapshots should be used, and if the vm is running.
+						if [ "$use_snapshots" -eq 1 ] && [ "$vm_state" == "running" ]; then
+							
+							echo "$(date '+%Y-%m-%d %H:%M') information: able to perform snapshot for disk $disk on $vm. use_snapshots is $use_snapshots. vm_state is $vm_state. is_qcow2_disk is $is_qcow2_disk" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							# set variable for qemu agent is installed.
+							qemu_agent_installed=$(virsh qemu-agent-command "$vm" '{"execute":"guest-info"}' | grep -c "version" | awk '{ print $0 }')
+
+							# get directory of current disk.
+							disk_directory=$(dirname "$disk")
+
+							# remove trailing slash.
+							disk_directory=${disk_directory%/}
+							
+							# see if snapshot already exists.
+							#if [[ -f "$disk_directory/snap-$new_disk" ]]; then
+
+								#snapshot_exists=true
+
+								# remove existing snapshot.
+								#rm -f "$disk_directory/snap-$new_disk"
+
+								# sleep 2 seconds.
+								#sleep 2
+
+							#else
+
+								#snapshot_exists=false
+
+							#fi
+
+							# check to see if qemu agent is installed for snapshot creation command.
+							if [[ "$qemu_agent_installed" -eq 1 ]]; then
+
+								# set quiesce to enabled.
+								quiesce="--quiesce"
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: qemu agent found. enabling quiesce on snapshot." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							else
+
+								# set quiesce to disabled.
+								quiesce=""
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: qemu agent not found. disabling quiesce on snapshot." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							fi
+
+							# create snapshot
+							echo "$(date '+%Y-%m-%d %H:%M') information: creating snapshot snap-$new_disk for $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+							virsh snapshot-create-as --domain "$vm" --name "$vm snap-$new_disk" --diskspec "${vdisk_specs[$disk]}",file="$disk_directory/snap-$new_disk",snapshot=external --disk-only --no-metadata --atomic "$quiesce"
+
+							snapshot_performed=true
+
+						else
+
+							echo "$(date '+%Y-%m-%d %H:%M') information: unable to perform snapshot for disk $disk on $vm. use_snapshots is $use_snapshots. vm_state is $vm_state. is_qcow2_disk is $is_qcow2_disk" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							snapshot_performed=false
+
+						fi
+
+
 
 						# copy or pretend to copy the vdisk to the backup location specified by the user.
 						# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
@@ -2234,6 +2354,42 @@ do
 						else
 
 							echo "$(date '+%Y-%m-%d %H:%M') information: backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+						fi
+
+						# check to see if snapshot was created
+						if [[ "$snapshot_performed" = true ]]; then
+
+							# verify vm is still running before attempting to commit changes from snapshot.
+							if [ "$vm_state" == "running" ]; then
+
+								# commit changes from snapshot.
+								virsh blockcommit "$vm" "${vdisk_specs[$disk]}" --active --wait --verbose --pivot
+
+								# wait 5 seconds.
+								sleep 5
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: commited changes from snapshot for $disk on $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+								# see if snapshot still exists.
+								if [[ -f "$disk_directory/snap-$new_disk" ]]; then
+
+									# if it does, forcibly remove it.
+									rm -f "$disk_directory/snap-$new_disk"
+
+								fi
+
+							else
+
+								echo "$(date '+%Y-%m-%d %H:%M') warning: snapshot performed for $vm, but vm state is $vm_state. cannot commit changes from snapshot." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+	
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "script skipping $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: snapshot performed for $vm, but vm state is $vm_state. cannot commit changes from snapshot."
+
+								fi
+
+							fi
 
 						fi
 
@@ -3245,8 +3401,11 @@ exit 0
 
 # Originally from unraid-autovmbackup by Daniel Jackson (danioj)
 # Includes additions for removing old backups added by Deeks
+# Includes additions for creating snapshots added by thies88
 
 # for original script go to:
 # https://lime-technology.com/forum/index.php?topic=47986
 # for Deeks script go to:
 # https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821
+# for thies88 script go to:
+# https://github.com/thies88/unraid-vmbackup

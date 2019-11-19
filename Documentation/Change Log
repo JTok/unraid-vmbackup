@@ -12,6 +12,7 @@
 #  - fixed issue with where files would not be removed after compressing when config files were not set to be backed up.
 #  - updated comments to use more consistent terms.
 #  - added option to allow specific vms to be backed up without shutting down.
+#  - added option to allow vms to be backed up using snapshots. default is enabled.
 
 # v1.1.4 - 2018/05/19
 #  A Rose by Any Other Name

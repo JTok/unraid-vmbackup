@@ -6,3 +6,4 @@
 #  - create functions to reduce file length and increase readability.
 #  - set config (xml) and nvram (fd) files to pull extensions programmatically to prevent future issues.
 #  - change how files are deleted when number_of_backups_to_keep is being used. possibly use a list before removing files?
+#  - test case where vdisk1 does not exist.
