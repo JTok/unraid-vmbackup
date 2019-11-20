@@ -7,3 +7,6 @@
 #  - set config (xml) and nvram (fd) files to pull extensions programmatically to prevent future issues.
 #  - change how files are deleted when number_of_backups_to_keep is being used. possibly use a list before removing files?
 #  - test case where vdisk1 does not exist.
+#  - use different backup source disk when snapshots are enabled to speed up overall backup times. give option for rsync and cp?
+#  - fail if snapshot isn't able to be performed.
+#  - option to revert back to traditional backup if snapshot fails.
