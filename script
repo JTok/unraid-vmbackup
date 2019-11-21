@@ -3635,11 +3635,11 @@ exit 0
 
 # Originally from unraid-autovmbackup by Daniel Jackson (danioj)
 # Includes additions for removing old backups added by Deeks
-# Includes additions for creating snapshots added by thies88
+# Includes additions for creating snapshots added by Dikkekop (thies88)
 
 # for original script go to:
 # https://lime-technology.com/forum/index.php?topic=47986
 # for Deeks script go to:
 # https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821
-# for thies88 script go to:
+# for Dikkekop (thies88) script go to:
 # https://github.com/thies88/unraid-vmbackup

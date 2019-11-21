@@ -99,4 +99,4 @@ I do not make any guarantees as to the function of this script. It is provided a
 
 ###### Includes additions for removing old backups added by Deeks [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821 "unraid-autovmbackup Deeks' script")
 
-###### Includes additions for creating snapshots added by thies88 [here](https://github.com/thies88/unraid-vmbackup "unraid-vmbackup thies88's script")
+###### Includes additions for creating snapshots added by Dikkekop (thies88) [here](https://github.com/thies88/unraid-vmbackup "unraid-vmbackup Dikkekop's script")
