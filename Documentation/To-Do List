@@ -8,3 +8,4 @@
 #  - change how files are deleted when number_of_backups_to_keep is being used. possibly use a list before removing files?
 #  - test case where vdisk1 does not exist.
 #  - option to revert back to traditional backup if snapshot fails.
+#  - handle errors that appear in system log more gracefully.

@@ -1,6 +1,6 @@
 # unraid-vmbackup
 
-v1.1.5 - 2019/11/21
+v1.2.0 - TESTING
 
 Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-technology.com/forums/topic/48286-plugin-ca-user-scripts/ "CA User Scripts") for more information.
 
