@@ -35,6 +35,7 @@ vm2
 "
 
 # list of specific vdisks to be skipped. use the full path.
+# NOTE: must match path in vm config file.
 vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk2.img
 /mnt/user/domains/vm1/vdisk3.img
@@ -1398,7 +1399,7 @@ do
 
 	done
 
-	# if vm is not found in vms_to_backup_running and use_snapshots is not enabled, then skip shutdown proceedure.
+	# if vm is not found in vms_to_backup_running and use_snapshots is disabled, then skip shutdown proceedure.
 	if [ "$skip_vm_shutdown" = false ] && [ "$use_snapshots" -eq 0 ]; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') information: skip_vm_shutdown is false. beginning vm shutdown procedure." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
@@ -1567,10 +1568,20 @@ do
 
 		fi
 
-	else
+	elif [ "$skip_vm_shutdown" = true ] || [ "$use_snapshots" -eq 1 ]; then
 
 		can_backup_vm="y"
 		echo "$(date '+%Y-%m-%d %H:%M') information: skip_vm_shutdown is $skip_vm_shutdown and use_snapshots is $use_snapshots. skipping vm shutdown procedure. $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+	
+	else
+
+		echo "$(date '+%Y-%m-%d %H:%M') failure: skip_vm_shutdown is $skip_vm_shutdown and use_snapshots is $use_snapshots. skipping vm shutdown procedure. $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+		if [ "$send_notifications" -eq 1 ];then
+
+			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: skip_vm_shutdown is $skip_vm_shutdown and use_snapshots is $use_snapshots. skipping vm shutdown procedure. $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+		fi
 
 	fi
 
@@ -2231,20 +2242,9 @@ do
 
 							fi
 
-						else
+						elif [ "$use_snapshots" -eq 1 ] && [ "$vm_state" != "running" ]; then
 
-							snapshot_succeeded=false
-
-							echo "$(date '+%Y-%m-%d %H:%M') failure: unable to perform snapshot for disk $disk on $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-							if [ "$send_notifications" -eq 1 ]; then
-
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') unable to perform snapshot for disk $disk on $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}."
-
-							fi
-
-							# break out of current vdisk loop to prevent potential data loss.
-							break
+							echo "$(date '+%Y-%m-%d %H:%M') information: unable to perform snapshot for disk $disk on $vm. falling back to traditional backup. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 						fi
 
@@ -2469,7 +2469,7 @@ do
 
 						fi
 
-						# check to see if snapshot was created6
+						# check to see if snapshot was created.
 						if [[ "$snapshot_succeeded" = true ]]; then
 
 							# verify vm is still running before attempting to commit changes from snapshot.
