@@ -1,16 +1,23 @@
 # unraid-vmbackup
 
+v1.1.5 - 2019/11/21
+
 Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-technology.com/forums/topic/48286-plugin-ca-user-scripts/ "CA User Scripts") for more information.
 
 Currently the script is in a relatively stable state, and most of the features have been implemented. I have tested them as well as I can, but I cannot guarantee they will work correctly for everyone, so be sure to test thoroughly on your system before depending on this script for backups. Please review the Change Log and To-Do List if you would like to know more.
 
-v1.1.4 - 2018/05/19
+## Important
+
+The virtual disks attached to a single VM must have unique names regardless of their location since during the backup they will be placed into the same folder.
+i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img since the vdisks will overwrite the each other during the backup. However, VM1 and VM2 can both have a vdisk1.img since they will be backed up to different folders.
 
 ## Installation
 
 - Add the script and description files to the CA User Scripts plugin. No other files are necessary to make the script work.
 
 - Set the variables in the script file.
+
+  - be sure to set enabled = "1" to ensure that the script will run.
 
 - Choose a schedule in the CA User Scripts plugin.
 
@@ -21,6 +28,10 @@ v1.1.4 - 2018/05/19
 - List VMs to be backed up.
 
 - List specific vdisks to skip, if any.
+
+- List specific vdisk extensions to skip, if any (iso listed by default).
+
+- Option to use snapshots to backup VMs without shutting down. Changes will need to be made to VM config before enabling.
 
 - Option to kill a VM that won't shutdown cleanly.
 
@@ -64,6 +75,8 @@ v1.1.4 - 2018/05/19
 
 - Option to only use rsync.
 
+- Advanced: Option to keep specific VMs running during backup. Not recommended.
+
 - Advanced: Option to enable reconstruct write during backups.
 
 - Advanced: Option to compare files and retry backup in the event of failure.
@@ -73,8 +86,6 @@ v1.1.4 - 2018/05/19
 - Advanced: Option to skip backing up nvram.
 
 - Advanced: Option to skip backing up vdisks.
-
-- Advanced: Option to ignore iso files when checking for valid vdisks.
 
 - Advanced: Choose the number of times to check if a VM is shut down.
 
@@ -86,4 +97,6 @@ I do not make any guarantees as to the function of this script. It is provided a
 
 ###### Originally from unraid-autovmbackup by Daniel Jackson (danioj) [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/ "unraid-autovmbackup")
 
-###### Includes additions for removing old backups added by Deeks [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821 "unraid-autovmbackup Deek's script")
+###### Includes additions for removing old backups added by Deeks [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821 "unraid-autovmbackup Deeks' script")
+
+###### Includes additions for creating snapshots added by thies88 [here](https://github.com/thies88/unraid-vmbackup "unraid-vmbackup thies88's script")

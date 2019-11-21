@@ -1,44 +1,36 @@
 ## Change Log ##
 
-# v1.0.0 - 2018/03/13
-#  initial release
+# v1.1.5 - 2019/11/21
+#  In Loving Memory of Net Neutrality
 #
-#  includes features from original as well as:
-#  - Uses cp for initial sync because it is quicker than rsync and has the added bonus (at least in my testing) of creating smaller sparse files than rsync does.
-#  - Keeps one copy of each vdisk to offset risk of using --inplace with rsync.
-#  - Uses rsync for syncing changes to backups.
-#  - Corrected some logging errors.
-#  - Temporarily disabled keeping backups for a set number of days.
-#  - Changed default check from 60 seconds to 30 seconds and doubled number of allowed failures to 20.
-#  - VMs are now started after backup if they were running before the backup was started.
+#  - fixed some errors not generating an error log file.
+#  - updated comments.
+#  - updated documentation to include important information.
+#  - reverse changelog order.
+#  - added support for more vdisk extensions by parsing them directly from the config.
+#  - added user variable (case-insensitive) for blacklisting extensions. iso included by default.
+#  - fixed issue with where files would not be removed after compressing when config files were not set to be backed up.
+#  - updated comments to use more consistent terms.
+#  - added option to allow specific vms to be backed up without shutting down.
+#  - added option to allow vms to be backed up using snapshots. disabled by default.
+#  - fixed script trying to remove leftover files that weren't part of the backup.
 
-# v1.1.0 - 2018/03/14
-#  Stephen Hawking special edition
+# v1.1.4 - 2018/05/19
+#  A Rose by Any Other Name
 #
-#  - moved variables closer to the top to make them easier to access.
-#  - added ability to specify specific vdisks to be skipped.
-#  - vm_original_state can be overridden.
-#  - xml and/or vdisk backups can be skipped.
-#  - created variable to set number of days to keep backups.
-#  - support for img and qcow2 files.
-#  - made xml backups more efficient.
-#  - can now set the number of backups to be kept.
-#  - changed from mtime to mmin for more accurate cleaning.
-#  - timestamps are always used except when the number of backups being kept is equal to 1.
-#  - added ability to compress backups.
-#  - added option to compare backups and retry once on failure.
-#  - updated disclaimer.
+#  - fixed vdisks not being skipped.
+#  - fixed incorrect copying when using delta sync with multiple vdisks.
+#  - fixed number of vdisks being kept when VM has multiple vdisks.
+#  - added option to enable reconstruct write during backups.
 
-# v1.1.1 - 2018/03/18
-#  For the Queen
+# v1.1.3 - 2018/04/16
+#  From Here to Infirmary
 #
-#  - added option to disable delta syncs.
-#  - added option to only use rsync.
-#  - dry-runs can now be used with the rsync_only option.
-#  - added dates to logging.
-#  - creates log files in backup folder.
-#  - creates error log files in backup folder.
-#  - log messages pushed through unRAID notification system by default.
+#  - included inline variable to prevent script from running if a parity check is in progress.
+#  - fixed spelling errors in script.
+#  - added advanced option to ignore iso files during vdisk check.
+#  - fixed so tarballs so files are added without full paths.
+#  - updated user selectable options so that they only generate a warning in the log, not a full error log file.
 
 # v1.1.2 - 2018/03/26
 #  The Land Before Time 4: how many are there anyway?
@@ -60,19 +52,42 @@
 #  - added detailed logging for tarballs.
 #  - fixed issue where rm didn't always get logged to the log file.
 
-# v1.1.3 - 2018/04/16
-#  From Here to Infirmary
+# v1.1.1 - 2018/03/18
+#  For the Queen
 #
-#  - included inline variable to prevent script from running if a parity check is in progress.
-#  - fixed spelling errors in script.
-#  - added advanced option to ignore iso files during vdisk check.
-#  - fixed so tarballs so files are added without full paths.
-#  - updated user selectable options so that they only generate a warning in the log, not a full error log file.
+#  - added option to disable delta syncs.
+#  - added option to only use rsync.
+#  - dry-runs can now be used with the rsync_only option.
+#  - added dates to logging.
+#  - creates log files in backup folder.
+#  - creates error log files in backup folder.
+#  - log messages pushed through unRAID notification system by default.
 
-# v1.1.4 - 2018/05/19
-#  A Rose by Any Other Name
+# v1.1.0 - 2018/03/14
+#  Stephen Hawking special edition
 #
-#  - fixed vdisks not being skipped.
-#  - fixed incorrect copying when using delta sync with multiple vdisks.
-#  - fixed number of vdisks being kept when VM has multiple vdisks.
-#  - added option to enable reconstruct write during backups.
+#  - moved variables closer to the top to make them easier to access.
+#  - added ability to specify specific vdisks to be skipped.
+#  - vm_original_state can be overridden.
+#  - xml and/or vdisk backups can be skipped.
+#  - created variable to set number of days to keep backups.
+#  - support for img and qcow2 files.
+#  - made xml backups more efficient.
+#  - can now set the number of backups to be kept.
+#  - changed from mtime to mmin for more accurate cleaning.
+#  - timestamps are always used except when the number of backups being kept is equal to 1.
+#  - added ability to compress backups.
+#  - added option to compare backups and retry once on failure.
+#  - updated disclaimer.
+
+# v1.0.0 - 2018/03/13
+#  initial release
+#
+#  includes features from original as well as:
+#  - Uses cp for initial sync because it is quicker than rsync and has the added bonus (at least in my testing) of creating smaller sparse files than rsync does.
+#  - Keeps one copy of each vdisk to offset risk of using --inplace with rsync.
+#  - Uses rsync for syncing changes to backups.
+#  - Corrected some logging errors.
+#  - Temporarily disabled keeping backups for a set number of days.
+#  - Changed default check from 60 seconds to 30 seconds and doubled number of allowed failures to 20.
+#  - VMs are now started after backup if they were running before the backup was started.

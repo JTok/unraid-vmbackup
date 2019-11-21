@@ -3,7 +3,7 @@
 #arrayStarted=true
 #noParity=true
 
-# v1.1.4 - 2018/05/19
+# v1.1.5 - 2019/11/21
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -28,7 +28,7 @@ enabled="0"
 # backup location to put vdisks.
 backup_location="/mnt/user/share/backup_folder/"
 
-# list of domains that will be backed up separated by a new line.
+# list of vms that will be backed up separated by a new line.
 vms_to_backup="
 vm1
 vm2
@@ -39,6 +39,16 @@ vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk2.img
 /mnt/user/domains/vm1/vdisk3.img
 "
+
+# list of specific vdisk extensions to be skipped. this replaces the old ignore_isos variable.
+vdisk_extensions_to_skip="
+iso
+"
+
+# use snapshots to backup vms.
+# NOTE: vms that are backed up using snapshots will not be shutdown. if a vm is already shutdown the default backup method will be used.
+# WARNING: this will fail if the config path for the virtual disk is /mnt/user/. you must use /mnt/cache/ or /mnt/diskX/ for snapshots to work.
+use_snapshots="0"
 
 # default is 0. set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
 kill_vm_if_cant_shutdown="0"
@@ -54,7 +64,7 @@ number_of_days_to_keep_backups="0"
 number_of_backups_to_keep="0"
 
 # default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
-# WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all .xml, .img, and .qcow2 images in the backup directory into ONE tarball.
+# WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all config, nvram, and vdisk images in the backup directory into ONE tarball.
 compress_backups="0"
 
 # default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
@@ -82,6 +92,12 @@ detailed_notifications="0"
 
 #### advanced variables ####
 
+# list of vms that will be backed up WITHOUT first shutting down separated by a new line. These must also be listed in vms_to_backup.
+# NOTE: vms backed up via snapshot will not be shutdown (see use_snapshots option).
+# WARNING: using this setting can result in an unusable backup. not recommended.
+vms_to_backup_running="
+"
+
 # default is 0. set to 1 to have reconstruct write (a.k.a. turbo write) enabled during the backup and then disabled after the backup completes.
 # NOTE: may break auto functionality when it is implemented. do not use if reconstruct write is already enabled. backups may run faster with this enabled.
 enable_reconstruct_write="0"
@@ -97,9 +113,6 @@ backup_nvram="1"
 
 # default is 1. set to 0 if you would like to skip backing up vdisks. setting this to 0 will automatically disable compression.
 backup_vdisks="1"
-
-# default is 0. set to 1 if you would like iso files to be ignored when checking for valid vdisks.
-ignore_isos="0"
 
 # default is 0. set this to 1 if you would like to start a vm after it has successfully been backed up. will override set_vm_to_original_state when set to 1.
 start_vm_after_backup="0"
@@ -422,6 +435,66 @@ else
 fi
 
 
+# add .snap extension to extensions_to_skip if it is not already present.
+# initialize vairable snap_exists as false
+snap_exists=false
+
+# for each extension check to see if it is already in the array.
+for extension in $vdisk_extensions_to_skip
+
+do
+
+	# if the extension already exists in the array set snap_exists to true and break out of the current loop.
+	if [ "$extension" == "snap" ]; then
+
+		snap_exists=true
+		break
+
+	fi
+
+done
+
+# if snap extension was not found in the array, add it. else move on.
+if [ "$snap_exists" = false ]; then
+
+	vdisk_extensions_to_skip="$vdisk_extensions_to_skip"$'\n'"snap"
+
+	echo "$(date '+%Y-%m-%d %H:%M') information: snap extension not found in vdisk_extensions_to_skip. extension was added." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+else
+
+	echo "$(date '+%Y-%m-%d %H:%M') information: snap extension was not found in vdisk_extensions_to_skip. moving on" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+fi
+
+
+# check to see if snapshots should be used. if yes, continue. if no, continue. if input invalid, exit.
+if [[ "$use_snapshots" =~ ^(0|1)$ ]]; then
+
+	if [ "$use_snapshots" -eq 0 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: use_snapshots is $use_snapshots. vms will not be backed up using snapshots." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+	elif [ "$use_snapshots" -eq 1 ]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') information: use_snapshots is $use_snapshots. vms will be backed up using snapshots if possible." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+	fi
+
+else
+
+	echo "$(date '+%Y-%m-%d %H:%M') failure: use_snapshots is $use_snapshots. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+	if [ "$send_notifications" -eq 1 ];then
+
+		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: use_snapshots is $use_snapshots. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
+
+	fi
+
+	exit 1
+
+fi
+
 # check to see if vm should be killed if clean shutdown fails. if yes, continue. if no, continue. if input invalid, exit.
 if [[ "$kill_vm_if_cant_shutdown" =~ ^(0|1)$ ]]; then
 
@@ -644,7 +717,7 @@ else
 fi
 
 
-# check to see if xml should be backed up. if yes, continue. if no, continue. if input invalid, exit.
+# check to see if config should be backed up. if yes, continue. if no, continue. if input invalid, exit.
 if [[ "$backup_xml" =~ ^(0|1)$ ]]; then
 
 	if [ "$backup_xml" -eq 0 ]; then
@@ -672,7 +745,7 @@ else
 fi
 
 
-# check to see if xml should be backed up. if yes, continue. if no, continue. if input invalid, exit.
+# check to see if nvram should be backed up. if yes, continue. if no, continue. if input invalid, exit.
 if [[ "$backup_nvram" =~ ^(0|1)$ ]]; then
 
 	if [ "$backup_nvram" -eq 0 ]; then
@@ -722,34 +795,6 @@ else
 	if [ "$send_notifications" -eq 1 ];then
 
 		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: backup_vdisks is $backup_vdisks. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
-
-	fi
-
-	exit 1
-
-fi
-
-
-# check to see if iso files should be ignored when checking vdisks. if yes, continue. if no, continue. if input invalid, exit.
-if [[ "$ignore_isos" =~ ^(0|1)$ ]]; then
-
-	if [ "$ignore_isos" -eq 0 ]; then
-
-		echo "$(date '+%Y-%m-%d %H:%M') information: ignore_isos is $ignore_isos. iso files will not be ignored when checking vdisks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-	elif [ "$ignore_isos" -eq 1 ]; then
-
-		echo "$(date '+%Y-%m-%d %H:%M') information: ignore_isos is $ignore_isos. iso files will be ignored when checking vdisks." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-	fi
-
-else
-
-	echo "$(date '+%Y-%m-%d %H:%M') failure: ignore_isos is $ignore_isos. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-	if [ "$send_notifications" -eq 1 ];then
-
-		/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "script failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: ignore_isos is $ignore_isos. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting."
 
 	fi
 
@@ -882,7 +927,7 @@ if [[ "$actually_copy_files" =~ ^(0|1)$ ]]; then
 
 	elif [ "$actually_copy_files" -eq 1 ]; then
 
-		echo "$(date '+%Y-%m-%d %H:%M') information: actually_copy_files is $actually_copy_files. files will be copied." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		echo "$(date '+%Y-%m-%d %H:%M') information: actually_copy_files is $actually_copy_files. files will be copied." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	fi
 
@@ -1047,7 +1092,7 @@ if [ "$enable_reconstruct_write" -eq 1 ]; then
 
 fi
 
-# loop through the vms in the list and try and back up their associated xml configurations and vdisk(s).
+# loop through the vms in the list and try and back up their associated configs and vdisk(s).
 for vm in $vms_to_backup
 
 do
@@ -1077,7 +1122,7 @@ do
 	done
 
 
-	# if the skip flag was set in the previous section then we have to exit and move onto the next vm in the list.
+	# if the skip flag was set in the previous section then we have to exit and move on to the next vm in the list.
 	if [ "$skip_vm" == "y" ]; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') warning: $vm can not be found on the system. skipping vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
@@ -1100,7 +1145,7 @@ do
 	fi
 
 
-	# lets create a directory named after the vm within backup_location to store the backup files.
+	# create a directory named after the vm within backup_location to store the backup files.
 	if [ ! -d "$backup_location/$vm" ] ; then
 
 		echo "$(date '+%Y-%m-%d %H:%M') action: $backup_location/$vm does not exist. creating it." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
@@ -1115,15 +1160,35 @@ do
 	fi
 
 
-	# see if vdisks should be backed up, if the number of backups is more than 1, and if disable delta sync is disabled.
-	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
+	# see if vdisks should be backed up, if the number of backups is more than 1, if snapshots are being used, and if disable delta sync is disabled.
+	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$use_snapshots" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
 
-		# get the list of the vdisks associated with the vm and address them one by one.
-		vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v '\-\-\-\-\-' | awk -F" {2,}" '{print $4}')
+		# dump the vm config locally first.
+		virsh dumpxml "$vm" > "$vm.xml"
+
+		# get number of vdisks assoicated with the vm.
+		vdisk_count=$(xmllint --xpath "count(/domain/devices/disk/source/@file)" "$vm.xml")
+
+		# unset array for vdisks.
+		unset vdisks
+		# initialize vdisks as empty array
+		vdisks=()
+
+		# get vdisk paths from config file.
+		for (( i=1; i<=vdisk_count; i++ ))
+		
+		do
+		
+			vdisks+=("$(xmllint --xpath "string(/domain/devices/disk[$i]/source/@file)" "$vm.xml")")
+		
+		done
+
+		# delete the working copy of the config.
+		rm "$vm.xml"
 
 
 		# check for the header in vdisks to see if there are any disks
-		if [ "$vdisks" == "Source" ]; then
+		if [ ${#vdisks[@]} -eq 0 ]; then
 
 			echo "$(date '+%Y-%m-%d %H:%M') warning: there are no vdisk(s) associated with $vm to backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
@@ -1136,15 +1201,16 @@ do
 		fi
 
 		# get vdisk names to check on current backups
-		for disk in $vdisks
+		for disk in "${vdisks[@]}"
 
 		do
 
-			if [ ! "$disk" == "Source" ]; then
+			if [ ! "$disk" == "" ]; then
 
-				# check to see if disk should be skipped.
+				# assume disk will not be skipped.
 				skip_disk="0"
 				
+				# check to see if vdisk should be explicitly skipped.
 				for skipvdisk_name in $vdisks_to_skip
 
 				do
@@ -1153,47 +1219,49 @@ do
 
 						skip_disk="1"
 
-						echo "$(date '+%Y-%m-%d %H:%M') information: $disk for $vm was found in vdisks_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+						echo "$(date '+%Y-%m-%d %H:%M') information: $disk on $vm was found in vdisks_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					fi
 
 				done
 
+				# get the extension of the disk.
+				disk_extension="${disk##*.}"
+
+				# disable case matching.
+				shopt -s nocasematch
+
+
+				# check to see if vdisk should be skipped by extension.
+				for skipvdisk_extension in $vdisk_extensions_to_skip
+
+				do
+
+					if [ "$skipvdisk_extension" == "$disk_extension" ]; then
+
+						skip_disk="1"
+
+						echo "$(date '+%Y-%m-%d %H:%M') information: extension for $disk on $vm was found in vdisks_extensions_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+					fi
+
+				done
+
+				# re-enable case matching.
+				shopt -u nocasematch
+
 				# get the filename of the disk without the path.
 				new_disk=$(basename "$disk")
 
-				# get the disk number and extension
+				# unset vairiable for disk_number
 				unset -v disk_number
 
-				vdisknameregex="[0-9]+\\.(img|qcow2)"
+				# get the disk number and extension
+				vdisknameregex="[0-9]+\\.$disk_extension"
 
 				if [[ $disk =~ $vdisknameregex ]]; then
 
 					disk_number=${BASH_REMATCH[0]}
-
-				fi
-
-				# check the extension of the disk to ensure only vdisks are copied.
-				# Do not use in conjunction with qemu-img conversion
-				if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
-
-					if [ "$ignore_isos" -eq 1 ] && [ "${disk##*.}" == "iso" ]; then
-
-						echo "$(date '+%Y-%m-%d %H:%M') information: $disk of $vm is an iso not a vdisk. skipping." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-					else
-
-						echo "$(date '+%Y-%m-%d %H:%M') warning: $disk of $vm is not a vdisk. skipping." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-						if [ "$send_notifications" -eq 1 ]; then
-
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "no valid vdisk(s) for $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: $disk of $vm is not a vdisk. skipping."
-
-						fi
-
-					fi
-					
-					continue
 
 				fi
 				
@@ -1206,7 +1274,7 @@ do
 					# see if disk_number is empty. if not, set to wildcard.
 					if [ -z "$disk_number" ]; then
 					
-						disk_number='.@(img|qcow2)'
+						disk_number='.@'$disk_extension''
 
 					fi
 
@@ -1247,6 +1315,8 @@ do
 							# get rsync result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								 echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -1262,6 +1332,8 @@ do
 							# get cp result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -1272,7 +1344,7 @@ do
 
 						fi
 
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+						# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 						touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 						# send a message to the user based on whether there was an actual copy or a dry-run.
@@ -1312,69 +1384,103 @@ do
 	# get the state of the vm for putting the VM in it's original state after backing up.
 	vm_original_state=$vm_state
 
-	# resume the vm if it is suspended, based on testing this should be instant but will trap later if it has not resumed.
-	if [ "$vm_state" == "paused" ]; then
+	# initialize skip_vm_shutdown variable as false.
+	skip_vm_shutdown=false
 
-		echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. resuming." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+	# determine if vm should be kept running.
+	# first check to see if vm exists in vms_to_backup_running variable.
+	for vm_to_keep_running in $vms_to_backup_running
+	do
 
-		# resume the vm.
-		virsh resume "$vm"
+		if [[ "$vm_to_keep_running" == "$vm" ]]; then
+			skip_vm_shutdown=true
+		fi
 
-	fi
+	done
 
+	# if vm is not found in vms_to_backup_running and use_snapshots is not enabled, then skip shutdown proceedure.
+	if [ "$skip_vm_shutdown" = false ] && [ "$use_snapshots" -eq 0 ]; then
 
-	# if the vm is running try and shut it down.
-	if [ "$vm_state" == "running" ]; then
+		echo "$(date '+%Y-%m-%d %H:%M') information: skip_vm_shutdown is false. beginning vm shutdown procedure." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-		echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. shutting down." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		# resume the vm if it is suspended, based on testing this should be instant but will trap later if it has not resumed.
+		if [ "$vm_state" == "paused" ]; then
 
-		# attempt to cleanly shutdown the vm.
-		virsh shutdown "$vm"
+			echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. resuming." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-		echo "$(date '+%Y-%m-%d %H:%M') information: performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to shutdown cleanly" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+			# resume the vm.
+			virsh resume "$vm"
 
-		# the shutdown of the vm may last a while so we are going to check periodically based on global input variables.
-		for (( i=1; i<=clean_shutdown_checks; i++ ))
+		fi
 
-		do
+		# if the vm is running try and shut it down.
+		if [ "$vm_state" == "running" ]; then
 
-			echo "$(date '+%Y-%m-%d %H:%M') information: cycle $i of $clean_shutdown_checks: waiting $seconds_to_wait seconds before checking if the vm has shutdown" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+			echo "$(date '+%Y-%m-%d %H:%M') action: $vm is $vm_state. shutting down." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			# wait x seconds based on how many seconds the user wants to wait between checks for a clean shutdown.
-			sleep $seconds_to_wait
+			# attempt to cleanly shutdown the vm.
+			virsh shutdown "$vm"
 
-			# get the state of the vm.
-			vm_state=$(virsh domstate "$vm")
+			echo "$(date '+%Y-%m-%d %H:%M') information: performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to shutdown cleanly" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-			# if the vm is running decide what to do.
-			if [ "$vm_state" == "running" ]; then
+			# the shutdown of the vm may last a while so we are going to check periodically based on global input variables.
+			for (( i=1; i<=clean_shutdown_checks; i++ ))
 
-				echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+			do
 
-				# if we have already exhausted our wait time set by the script variables then its time to do something else.
-				if [ $i = "$clean_shutdown_checks" ] ; then
+				echo "$(date '+%Y-%m-%d %H:%M') information: cycle $i of $clean_shutdown_checks: waiting $seconds_to_wait seconds before checking if the vm has shutdown" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					# check if the user wants to kill the vm on failure of unclean shutdown.
-					if [ "$kill_vm_if_cant_shutdown" -eq 1 ]; then
+				# wait x seconds based on how many seconds the user wants to wait between checks for a clean shutdown.
+				sleep $seconds_to_wait
 
-						echo "$(date '+%Y-%m-%d %H:%M') action: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. killing vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				# get the state of the vm.
+				vm_state=$(virsh domstate "$vm")
 
-						# destroy vm, based on testing this should be instant and without failure.
-						virsh destroy "$vm"
+				# if the vm is running decide what to do.
+				if [ "$vm_state" == "running" ]; then
 
-						# get the state of the vm.
-						vm_state=$(virsh domstate "$vm")
+					echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-						# if the vm is shut off then proceed or give up.
-						if [ "$vm_state" == "shut off" ]; then
+					# if we have already exhausted our wait time set by the script variables then its time to do something else.
+					if [ $i = "$clean_shutdown_checks" ] ; then
 
-							# set a flag to check later to indicate whether to backup this vm or not.
-							can_backup_vm="y"
+						# check if the user wants to kill the vm on failure of unclean shutdown.
+						if [ "$kill_vm_if_cant_shutdown" -eq 1 ]; then
 
-							echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+							echo "$(date '+%Y-%m-%d %H:%M') action: kill_vm_if_cant_shutdown is $kill_vm_if_cant_shutdown. killing vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-							break
+							# destroy vm, based on testing this should be instant and without failure.
+							virsh destroy "$vm"
 
+							# get the state of the vm.
+							vm_state=$(virsh domstate "$vm")
+
+							# if the vm is shut off then proceed or give up.
+							if [ "$vm_state" == "shut off" ]; then
+
+								# set a flag to check later to indicate whether to backup this vm or not.
+								can_backup_vm="y"
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+								break
+
+							else
+
+								# set a flag to check later to indicate whether to backup this vm or not.
+								can_backup_vm="n"
+
+								echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+								if [ "$send_notifications" -eq 1 ];then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M')" "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+
+								fi
+
+							fi
+
+						# if the user doesn't want to force a shutdown then there is nothing more to do so i cannot backup the vm.
 						else
 
 							# set a flag to check later to indicate whether to backup this vm or not.
@@ -1384,96 +1490,87 @@ do
 
 							if [ "$send_notifications" -eq 1 ];then
 
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M')" "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
 							fi
 
 						fi
 
-					# if the user doesn't want to force a shutdown then there is nothing more to do so i cannot backup the vm.
-					else
+					fi
 
-						# set a flag to check later to indicate whether to backup this vm or not.
-						can_backup_vm="n"
+				# if the vm is shut off then go onto backing it up.
+				elif [ "$vm_state" == "shut off" ]; then
 
-						echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+					# set a flag to check later to indicate whether to backup this vm or not.
+					can_backup_vm="y"
 
-						if [ "$send_notifications" -eq 1 ];then
+					echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+					break
 
-						fi
+				# if the vm is in a state that is not explicitly defined then do nothing as it is unknown how to handle it.
+				else
+
+					# set a flag to check later to indicate whether to backup this vm or not.
+					can_backup_vm="n"
+
+					echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+					if [ "$send_notifications" -eq 1 ];then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
 					fi
 
 				fi
 
-			# if the vm is shut off then go onto backing it up.
-			elif [ "$vm_state" == "shut off" ]; then
+			done
 
-				# set a flag to check later to indicate whether to backup this vm or not.
-				can_backup_vm="y"
 
-				echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+		# if the vm is shut off then go straight onto backing it up.
+		elif [ "$vm_state" == "shut off" ]; then
 
-				break
+			# set a flag to check later to indicate whether to backup this vm or not.
+			can_backup_vm="y"
 
-			# if the vm is in a state that is not explicitly defined then do nothing as it is unknown how to handle it.
-			else
+			echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-				# set a flag to check later to indicate whether to backup this vm or not.
-				can_backup_vm="n"
 
-				echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+		# if the vm is suspended then something went wrong with the attempt to recover it earlier so do not attempt to backup.
+		elif [ "$vm_state" == "suspended" ]; then
 
-				if [ "$send_notifications" -eq 1 ];then
+			# set a flag to check later to indicate whether to backup this vm or not.
+			can_backup_vm="n"
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+			echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-				fi
+			if [ "$send_notifications" -eq 1 ];then
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
 			fi
 
-		done
 
+		# if the vm is in a state that has not been explicitly defined then do nothing as it is unknown how to handle it.
+		else
 
-	# if the vm is shut off then go straight onto backing it up.
-	elif [ "$vm_state" == "shut off" ]; then
+			# set a flag to check later to indicate whether to backup this vm or not.
+			can_backup_vm="n"
 
-		# set a flag to check later to indicate whether to backup this vm or not.
-		can_backup_vm="y"
+			echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
-		echo "$(date '+%Y-%m-%d %H:%M') information: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+			if [ "$send_notifications" -eq 1 ];then
 
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
 
-	# if the vm is suspended then something went wrong with the attempt to recover it earlier so do not attempt to backup.
-	elif [ "$vm_state" == "suspended" ]; then
-
-		# set a flag to check later to indicate whether to backup this vm or not.
-		can_backup_vm="n"
-
-		echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-		if [ "$send_notifications" -eq 1 ];then
-
-			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
+			fi
 
 		fi
 
-
-	# if the vm is in a state that has not been explicitly defined then do nothing as it is unknown how to handle it.
 	else
 
-		# set a flag to check later to indicate whether to backup this vm or not.
-		can_backup_vm="n"
-
-		echo "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
-
-		if [ "$send_notifications" -eq 1 ];then
-
-			/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_failure" -s "unRAID VM Backup script" -d "$vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm"
-
-		fi
+		can_backup_vm="y"
+		echo "$(date '+%Y-%m-%d %H:%M') information: skip_vm_shutdown is $skip_vm_shutdown and use_snapshots is $use_snapshots. skipping vm shutdown procedure. $vm is $vm_state. can_backup_vm set to $can_backup_vm" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 	fi
 
@@ -1484,6 +1581,7 @@ do
 	# check whether to backup the vm or not.
 	if [[ "$can_backup_vm" == "y" ]]; then
 
+		# start backing up vm configuration, nvram, and snapshots.
 		echo "$(date '+%Y-%m-%d %H:%M') action: can_backup_vm flag is $can_backup_vm. starting backup of $vm configuration, nvram, and vdisk(s)." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		if [ "$detailed_notifications" -eq 1 ]; then
@@ -1496,20 +1594,22 @@ do
 
 		fi
 
-		# see if xml should be backed up.
+		# see if config should be backed up.
 		if [ "$backup_xml" -eq 1 ]; then
 
-			# dump the vm xml configuration locally first.
+			# dump the vm config locally first.
 			virsh dumpxml "$vm" > "$vm.xml"
 
 			# check if only one non-timestamped backup is being kept. if so, perform rsync without a timestamp. if not, continue as normal.
 			if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 			
-				# copy or pretend to copy the xml configuration to the backup location specified by the user.
+				# copy or pretend to copy the config to the backup location specified by the user.
 				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$vm.xml"
 
 				# get rsync result and send notification
 				if [[ $? -eq 1 ]]; then
+
+					echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 					if [ "$send_notifications" -eq 1 ]; then
 
@@ -1519,10 +1619,10 @@ do
 
 				fi
 
-				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+				# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 				touch -d "now" "$backup_location/$vm/$vm.xml"
 
-				# check to see if compare_files is enabled. if yes, check for xml differences.
+				# check to see if compare_files is enabled. if yes, check for config differences.
 				if [ "$compare_files" -eq 1 ]; then
 
 					if ! cmp -s "$vm.xml" "$backup_location/$vm/$vm.xml"; then
@@ -1540,6 +1640,8 @@ do
 						# get rsync result and send notification
 						if [[ $? -eq 1 ]]; then
 
+							echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 							if [ "$send_notifications" -eq 1 ]; then
 
 								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm.xml backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$vm.xml failed."
@@ -1548,7 +1650,7 @@ do
 
 						fi
 
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+						# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 						touch -d "now" "$backup_location/$vm/$vm.xml"
 
 						if ! cmp -s "$vm.xml" "$backup_location/$vm/$vm.xml"; then
@@ -1577,11 +1679,13 @@ do
 
 			else
 			
-				# copy or pretend to copy the xml configuration to the backup location specified by the user.
+				# copy or pretend to copy the config to the backup location specified by the user.
 				rsync -av$rsync_dry_run_option "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"
 
 				# get rsync result and send notification
 				if [[ $? -eq 1 ]]; then
+
+					echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 					if [ "$send_notifications" -eq 1 ]; then
 
@@ -1591,10 +1695,10 @@ do
 
 				fi
 
-				# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+				# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 				touch -d "now" "$backup_location/$vm/$timestamp$vm.xml"
 
-				# check to see if compare_files is enabled. if yes, check for xml differences.
+				# check to see if compare_files is enabled. if yes, check for config differences.
 				if [ "$compare_files" -eq 1 ]; then
 
 					if ! cmp -s "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"; then
@@ -1612,6 +1716,8 @@ do
 						# get rsync result and send notification
 						if [[ $? -eq 1 ]]; then
 
+							echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 							if [ "$send_notifications" -eq 1 ]; then
 
 								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm.xml backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm.xml to $backup_location/$vm/$timestamp$vm.xml failed."
@@ -1620,7 +1726,7 @@ do
 
 						fi
 
-						# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+						# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 						touch -d "now" "$backup_location/$vm/$timestamp$vm.xml"
 
 						if ! cmp -s "$vm.xml" "$backup_location/$vm/$timestamp$vm.xml"; then
@@ -1650,7 +1756,7 @@ do
 			fi
 
 
-			# delete the local copy of the xml configuration.
+			# delete the working copy of the config.
 			rm "$vm.xml"
 
 			# send a message to the user based on whether there was an actual copy or a dry-run.
@@ -1670,16 +1776,16 @@ do
 		# see if nvram should be backed up.
 		if [ "$backup_nvram" -eq 1 ]; then
 
-			# dump the vm xml configuration locally first.
+			# dump the vm config locally first.
 			virsh dumpxml "$vm" > "$vm.xml"
 
-			# extract nvram path from xml file.
+			# extract nvram path from config file.
 			nvram_path=$(xmllint --xpath "string(/domain/os/nvram)" "$vm.xml")
 
 			# get nvram file name from path.
 			nvram_filename=$(basename "$nvram_path")
 
-			# delete the local copy of the xml configuration.
+			# delete the working copy of the config.
 			rm "$vm.xml"
 
 			# check to see if nvram_path is empty.
@@ -1692,11 +1798,13 @@ do
 				# check if only one non-timestamped backup is being kept. if so, perform rsync without a timestamp. if not, continue as normal.
 				if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 				
-					# copy or pretend to copy the xml configuration to the backup location specified by the user.
+					# copy or pretend to copy the config to the backup location specified by the user.
 					rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$nvram_filename"
 
 					# get rsync result and send notification
 					if [[ $? -eq 1 ]]; then
+
+						echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 						if [ "$send_notifications" -eq 1 ]; then
 
@@ -1706,10 +1814,10 @@ do
 
 					fi
 
-					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+					# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 					touch -d "now" "$backup_location/$vm/$nvram_filename"
 
-					# check to see if compare_files is enabled. if yes, check for xml differences.
+					# check to see if compare_files is enabled. if yes, check for config differences.
 					if [ "$compare_files" -eq 1 ]; then
 
 						if ! cmp -s "$nvram_path" "$backup_location/$vm/$nvram_filename"; then
@@ -1727,6 +1835,8 @@ do
 							# get rsync result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm nvram to $backup_location/$vm/$nvram_filename failed."
@@ -1735,7 +1845,7 @@ do
 
 							fi
 
-							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 							touch -d "now" "$backup_location/$vm/$nvram_filename"
 
 							if ! cmp -s "$nvram_path" "$backup_location/$vm/$nvram_filename"; then
@@ -1764,11 +1874,13 @@ do
 
 				else
 				
-					# copy or pretend to copy the xml configuration to the backup location specified by the user.
+					# copy or pretend to copy the config to the backup location specified by the user.
 					rsync -av$rsync_dry_run_option "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"
 
 					# get rsync result and send notification
 					if [[ $? -eq 1 ]]; then
+
+						echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 						if [ "$send_notifications" -eq 1 ]; then
 
@@ -1778,10 +1890,10 @@ do
 
 					fi
 
-					# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+					# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 					touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
 
-					# check to see if compare_files is enabled. if yes, check for xml differences.
+					# check to see if compare_files is enabled. if yes, check for config differences.
 					if [ "$compare_files" -eq 1 ]; then
 
 						if ! cmp -s "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"; then
@@ -1799,6 +1911,8 @@ do
 							# get rsync result and send notification
 							if [[ $? -eq 1 ]]; then
 
+								echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 								if [ "$send_notifications" -eq 1 ]; then
 
 									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm nvram backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $vm to $backup_location/$vm/$timestamp$nvram_filename failed."
@@ -1807,7 +1921,7 @@ do
 
 							fi
 
-							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 							touch -d "now" "$backup_location/$vm/$timestamp$nvram_filename"
 
 							if ! cmp -s "$nvram_path" "$backup_location/$vm/$timestamp$nvram_filename"; then
@@ -1855,12 +1969,47 @@ do
 		# see if vdisks should be backed up.
 		if [ "$backup_vdisks" -eq 1 ]; then
 
-			# get the list of the vdisks associated with the vm and address them one by one.
-			vdisks=$(virsh domblklist "$vm" --details | grep -v "^$" | grep -v "^Target" | grep -v '\-\-\-\-\-' | awk -F" {2,}" '{print $4}')
+			# dump the vm config locally first.
+			virsh dumpxml "$vm" > "$vm.xml"
 
+			# get number of vdisks assoicated with the vm.
+			vdisk_count=$(xmllint --xpath "count(/domain/devices/disk/source/@file)" "$vm.xml")
 
-			# check for the header in vdisks to see if there are any disks
-			if [ "$vdisks" == "Source" ]; then
+			# unset array for vdisks.
+			unset vdisks
+			# initialize vdisks as empty array.
+			vdisks=()
+
+			# unset dictionary for vdisk_types.
+			unset vdisk_types
+			# initailize vdisk_types as dictionary.
+			declare -A vdisk_types
+
+			# unset dictionary for vdisk_types.
+			unset vdisk_specs
+			# initailize vdisk_types as dictionary.
+			declare -A vdisk_specs
+
+			# get vdisk paths, types, and specs from config file.
+			for (( i=1; i<=vdisk_count; i++ ))
+			
+			do
+			
+				vdisk_path="$(xmllint --xpath "string(/domain/devices/disk[$i]/source/@file)" "$vm.xml")"
+				vdisk_type="$(xmllint --xpath "string(/domain/devices/disk[$i]/driver/@type)" "$vm.xml")"
+				vdisk_spec="$(xmllint --xpath "string(/domain/devices/disk[$i]/target/@dev)" "$vm.xml")"
+
+				vdisks+=("$vdisk_path")
+				vdisk_types["$vdisk_path"]="$vdisk_type"
+				vdisk_specs["$vdisk_path"]="$vdisk_spec"
+			
+			done
+
+			# delete the working copy of the config.
+			rm "$vm.xml"
+
+			# check vdisks array to see if there are any disks
+			if [ ${#vdisks[@]} -eq 0 ]; then
 
 				echo "$(date '+%Y-%m-%d %H:%M') warning: there are no vdisk(s) associated with $vm to backup." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
@@ -1872,16 +2021,21 @@ do
 
 			fi
 
+			# unset array for vdisk_extensions.
+			unset vdisk_extensions
+			# initialize vdisk_extensions as empty array.
+			vdisk_extensions=()
 
-			for disk in $vdisks
+			for disk in "${vdisks[@]}"
 
 			do
 
-				if [ ! "$disk" == "Source" ]; then
+				if [ ! "$disk" == "" ]; then
 
-					# check to see if disk should be skipped.
+					# assume disk will not be skipped.
 					skip_disk="0"
 					
+					# check to see if vdisk should be explicitly skipped.
 					for skipvdisk_name in $vdisks_to_skip
 
 					do
@@ -1890,41 +2044,211 @@ do
 
 							skip_disk="1"
 
-							echo "$(date '+%Y-%m-%d %H:%M') information: $disk for $vm was found in vdisks_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+							echo "$(date '+%Y-%m-%d %H:%M') information: $disk on $vm was found in vdisks_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 						fi
 
 					done
 
+					# get the extension of the disk.
+					disk_extension="${disk##*.}"
+
+					# disable case matching.
+					shopt -s nocasematch
+
+					# check to see if vdisk should be skipped by extension.
+					for skipvdisk_extension in $vdisk_extensions_to_skip
+
+					do
+
+						if [ "$skipvdisk_extension" == "$disk_extension" ]; then
+
+							skip_disk="1"
+
+							echo "$(date '+%Y-%m-%d %H:%M') information: extension for $disk on $vm was found in vdisks_extensions_to_skip. skipping disk." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+						fi
+
+					done
+
+					# re-enable case matching.
+					shopt -u nocasematch
+
 					# get the filename of the disk without the path.
 					new_disk=$(basename "$disk")
 
-					# check the extension of the disk to ensure only vdisks are copied.
-					# Do not use in conjunction with qemu-img conversion
-					if [ ! "${disk##*.}" == "img" ] && [ ! "${disk##*.}" == "qcow2" ]; then
+					# skip the vdisk if skip_disk is set to 1
+					if [ "$skip_disk" -ne 1 ]; then
 
-						if [ "$ignore_isos" -eq 1 ] && [ "${disk##*.}" == "iso" ]; then
+						# add the extension of the disk being backed up to an array of vdisk extensions if it doesn't already exist
+						# set variable extension_exists to false.
+						extension_exists=false
 
-							echo "$(date '+%Y-%m-%d %H:%M') information: $disk of $vm is an iso not a vdisk. skipping." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+						# for each extension check to see if it is already in the array.
+						for extension in "${vdisk_extensions[@]}"
 
-						else
+						do
 
-							echo "$(date '+%Y-%m-%d %H:%M') warning: $disk of $vm is not a vdisk. skipping." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+							# if the extension already exists in the array set extension_exists to true and break out of the current loop.
+							if [ "$extension" == "$disk_extension" ]; then
 
-							if [ "$send_notifications" -eq 1 ]; then
-
-								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "no valid vdisk(s) for $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: $disk of $vm is not a vdisk. skipping."
+								extension_exists=true
+								break
 
 							fi
 
+						done
+
+						# if the extension was not found in the array add it.
+						if [ "$extension_exists" = false ]; then
+
+							vdisk_extensions+=("$disk_extension")
+
 						fi
-						
-						continue
 
-					fi
+						# check to see if snapshots should be used, and if the vm is running.
+						if [ "$use_snapshots" -eq 1 ] && [ "$vm_state" == "running" ]; then
+							
+							echo "$(date '+%Y-%m-%d %H:%M') information: able to perform snapshot for disk $disk on $vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					# skip the vdisk if skip_disk is set to 1
-					if [ "$skip_disk" -ne 1 ]; then
+							# set variable for qemu agent is installed.
+							qemu_agent_installed=$(virsh qemu-agent-command "$vm" '{"execute":"guest-info"}' | grep -c "version" | awk '{ print $0 }')
+
+							# get directory of current disk.
+							disk_directory=$(dirname "$disk")
+
+							# remove trailing slash.
+							disk_directory=${disk_directory%/}
+
+							# get name of current disk without extension and add .snap.
+							snap_name="${new_disk%.*}.snap"
+
+
+							# check to see if qemu agent is installed for snapshot creation command.
+							if [[ "$qemu_agent_installed" -eq 1 ]]; then
+
+								# set quiesce to enabled.
+								quiesce="--quiesce"
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: qemu agent found. enabling quiesce on snapshot." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							else
+
+								# set quiesce to disabled.
+								quiesce=""
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: qemu agent not found. disabling quiesce on snapshot." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							fi
+
+							# create snapshot command.
+							# unset array for snapshot_cmd.
+							unset snapshot_cmd
+
+							# initialize snapshot_cmd as empty array.
+							snapshot_cmd=()
+
+							# find each vdisk_spec and use it to build a snapshot command.
+							for vdisk_spec in "${vdisk_specs[@]}"
+
+							do
+
+								# check to see if snapshot command is empty.
+								if [ ${#snapshot_cmd[@]} -eq 0 ]; then
+
+									# build intial snapshot command.
+									snapshot_cmd=(virsh)
+									snapshot_cmd+=(snapshot-create-as)
+									snapshot_cmd+=(--domain "$vm")
+									snapshot_cmd+=(--name "$vm-$snap_name")
+
+									# check to see if this is the vdisk we are currently working with.
+									if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
+
+										# if it is, set the command to make a snapshot.
+										snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
+
+									else
+
+										# if it is not, set the command to not make a snapshot.
+										snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
+
+									fi
+
+								else
+
+									# add additional extensions to snapshot command.
+									# check to see if this is the vdisk we are currently working with.
+									if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
+
+										# if it is, set the command to make a snapshot.
+										snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
+
+									else
+
+										# if it is not, set the command to not make a snapshot.
+										snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
+
+									fi
+
+								fi
+
+							done
+
+							# add additonal options to snapshot command.
+							snapshot_cmd+=(--disk-only)
+							snapshot_cmd+=(--no-metadata)
+							snapshot_cmd+=(--atomic)
+
+							# check to see if snapshot command should include --quiesce.
+							if [ ! "$quiesce" == "" ]; then
+
+								snapshot_cmd+=("$quiesce")
+
+							fi
+
+							# create snapshot
+							if ! "${snapshot_cmd[@]}"; then
+
+								snapshot_succeeded=false
+								
+								echo "$(date '+%Y-%m-%d %H:%M') failure: snapshot command failed on $snap_name for $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: snapshot command failed on $snap_name for $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm."
+
+								fi
+
+								# break out of current vdisk loop to prevent potential data loss.
+								break
+
+							else
+
+								snapshot_succeeded=true
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: snapshot command succeeded on $snap_name for $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							fi
+
+						else
+
+							snapshot_succeeded=false
+
+							echo "$(date '+%Y-%m-%d %H:%M') failure: unable to perform snapshot for disk $disk on $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+							if [ "$send_notifications" -eq 1 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') unable to perform snapshot for disk $disk on $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}."
+
+							fi
+
+							# break out of current vdisk loop to prevent potential data loss.
+							break
+
+						fi
+
+
 
 						# copy or pretend to copy the vdisk to the backup location specified by the user.
 						# check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
@@ -1936,6 +2260,8 @@ do
 
 								# get rsync result and send notification
 								if [[ $? -eq 1 ]]; then
+
+									echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 									if [ "$send_notifications" -eq 1 ]; then
 
@@ -1951,7 +2277,7 @@ do
 
 							fi
 
-							# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+							# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 							touch -d "now" "$backup_location/$vm/$new_disk"
 
 							# check to see if compare_files is enabled. if yes, check for vdisk differences.
@@ -1971,6 +2297,8 @@ do
 
 									# get rsync result and send notification
 									if [[ $? -eq 1 ]]; then
+									
+										echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 										if [ "$send_notifications" -eq 1 ]; then
 
@@ -1980,7 +2308,7 @@ do
 
 									fi
 
-									# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+									# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 									touch -d "now" "$backup_location/$vm/$new_disk"
 
 									if ! cmp -s "$disk" "$backup_location/$vm/$new_disk"; then
@@ -2020,6 +2348,8 @@ do
 									# get rsync result and send notification
 									if [[ $? -eq 1 ]]; then
 
+										echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 										if [ "$send_notifications" -eq 1 ]; then
 
 											/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm vdisk backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -2035,9 +2365,11 @@ do
 									# get cp result and send notification
 									if [[ $? -eq 1 ]]; then
 
+										echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 										if [ "$send_notifications" -eq 1 ]; then
 										
-											/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk vdisk to $backup_location/$vm/$timestamp$new_disk failed."
+											/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
 
 										fi
 
@@ -2045,7 +2377,7 @@ do
 
 								fi
 
-								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+								# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 								touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 							else
@@ -2056,6 +2388,8 @@ do
 								# get rsync result and send notification
 								if [[ $? -eq 1 ]]; then
 
+									echo "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
 									if [ "$send_notifications" -eq 1 ]; then
 
 										/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "$vm vdisk backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: copy of backup of $disk to $backup_location/$vm/$timestamp$new_disk failed."
@@ -2064,7 +2398,7 @@ do
 
 								fi
 
-								# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+								# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 								touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 							fi
@@ -2095,7 +2429,7 @@ do
 
 									fi
 
-									# make sure copy has current date/time for modified attribute so that removing old disks by date will work.
+									# make sure copy has current date/time for modified attribute so that removing old backups by date will work.
 									touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
 
 									if ! cmp -s "$disk" "$backup_location/$vm/$timestamp$new_disk"; then
@@ -2135,13 +2469,62 @@ do
 
 						fi
 
+						# check to see if snapshot was created6
+						if [[ "$snapshot_succeeded" = true ]]; then
+
+							# verify vm is still running before attempting to commit changes from snapshot.
+							if [ "$vm_state" == "running" ]; then
+
+								# commit changes from snapshot.
+								virsh blockcommit "$vm" "${vdisk_specs[$disk]}" --active --wait --verbose --pivot
+
+								# wait 5 seconds.
+								sleep 5
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: commited changes from snapshot for $disk on $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+								# see if snapshot still exists.
+								if [[ -f "$disk_directory/$snap_name" ]]; then
+
+									# if it does, forcibly remove it.
+									rm -f "$disk_directory/$snap_name"
+
+									echo "$(date '+%Y-%m-%d %H:%M') information: forcibly removed snapshot $disk_directory/$snap_name for $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+								fi
+
+							else
+
+								echo "$(date '+%Y-%m-%d %H:%M') warning: snapshot performed for $vm, but vm state is $vm_state. cannot commit changes from snapshot." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+	
+								if [ "$send_notifications" -eq 1 ]; then
+
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "script skipping $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: snapshot performed for $vm, but vm state is $vm_state. cannot commit changes from snapshot."
+
+								fi
+
+							fi
+
+						fi
+
 					fi
 
 				fi
 
 			done
 
+			# check to see if the snapshot failed for the current vdisk. if so, continue to the next vm to prevent data loss.
+			if [ "$snapshot_succeeded" = false ]; then
+
+				continue
+
+			fi
+
 		fi
+
+
+		# list extensions of vdisks that were backed up.
+		echo "$(date '+%Y-%m-%d %H:%M') information: the extensions of the vdisks that were backed up are ${vdisk_extensions[*]}." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 
 		# check to see if set_vm_to_original_state is 1 and then check the vm's original state.
@@ -2207,34 +2590,212 @@ do
 			# check if only one non-timestamped backup is being kept. if so, perform compression without a timestamp. if not, continue as normal.
 			if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
 
-				# make sure new image files exist before removing existing tarball
-				if [[ -n $(find "$backup_location/$vm/" -type f \( -name "*.img" -or -name "*.qcow2" \) ) ]] && [[ -n $(find "$backup_location/$vm" -type f \( -name "*.xml" \) ) ]]; then
+				# unset array vdisk_extensions_find_cmd.
+				unset vdisk_extensions_find_cmd
+				# initialize vdisk_extensions_find_cmd as empty array.
+				vdisk_extensions_find_cmd=()
+				
+				# find each vdisk extension and use it to build a find command.
+				for extension in "${vdisk_extensions[@]}"
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: found new image files. removing existing tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				do
+
+					# check to see if find command is empty.
+					if [ ${#vdisk_extensions_find_cmd[@]} -eq 0 ]; then
+
+						# build intial find command.
+						vdisk_extensions_find_cmd=(find)
+						vdisk_extensions_find_cmd+=("$backup_location/$vm/")
+						vdisk_extensions_find_cmd+=(-type f)
+						vdisk_extensions_find_cmd+=(\()
+						vdisk_extensions_find_cmd+=(-name '*.'"$extension")
+
+					else
+
+						# add additional extensions to find command.
+						vdisk_extensions_find_cmd+=(-or -name '*.'"$extension")
+
+					fi
+
+				done
+
+				# put closing parenthesis on find command.
+				vdisk_extensions_find_cmd+=(\))
+
+				# make sure new image files exist before removing existing tarball
+				if [[ -n $("${vdisk_extensions_find_cmd[@]}") ]]; then
+
+					new_image_files_exist=true
+					echo "$(date '+%Y-%m-%d %H:%M') information: found new image files." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				else
+
+					new_image_files_exist=false
+					echo "$(date '+%Y-%m-%d %H:%M') warning: could not find new image files. backup may have failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+					if [ "$send_notifications" -eq 1 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "no new image files for $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: could not find new image files. backup may have failed."
+
+					fi
+
+				fi
+
+				# make sure new config files exist before removing existing tarball
+				if [[ "$backup_xml" -eq 1 ]] && [[ -n $(find "$backup_location/$vm" -type f \( -name '*.xml' \) ) ]]; then
+
+					new_xml_files_exist=true
+					echo "$(date '+%Y-%m-%d %H:%M') information: found new xml files." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				elif [[ "$backup_xml" -eq 0 ]]; then
+
+					new_xml_files_exist=true
+					echo "$(date '+%Y-%m-%d %H:%M') information: xml files not set to backup. skipping check." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				
+				else
+
+					new_xml_files_exist=false
+					echo "$(date '+%Y-%m-%d %H:%M') warning: could not find new xml files. backup may have failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+					if [ "$send_notifications" -eq 1 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "no new xml files for $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: could not find new xml files. backup may have failed."
+
+					fi
+
+				fi
+
+				# make sure new nvram files exist before removing existing tarball
+				if [[ "$backup_nvram" -eq 1 ]] && [[ -n $(find "$backup_location/$vm" -type f \( -name '*.fd' \) ) ]]; then
+
+					new_nvram_files_exist=true
+					echo "$(date '+%Y-%m-%d %H:%M') information: found new nvram files." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				elif [[ "$backup_nvram" -eq 0 ]]; then
+
+					new_nvram_files_exist=true
+					echo "$(date '+%Y-%m-%d %H:%M') information: nvram files not set to backup. skipping check." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				
+				else
+
+					new_nvram_files_exist=false
+					echo "$(date '+%Y-%m-%d %H:%M') warning: could not find new nvram files. backup may have failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+					if [ "$send_notifications" -eq 1 ]; then
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "no new nvram files for $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: could not find new nvram files. backup may have failed."
+
+					fi
+
+				fi
+
+				if [ "$new_image_files_exist" = true ] && [ "$new_xml_files_exist" = true ] && [ "$new_nvram_files_exist" = true ]; then
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: found new backup files. removing existing tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					# remove existing tarball
 					rm -fv "$backup_location/$vm/"*.tar.gz | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 					# create new compressed tarball with latest backup.
-					
 					echo "$(date '+%Y-%m-%d %H:%M') information: started creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					cd "$backup_location/$vm/" && tar zcvSf "$backup_location/$vm/$vm.tar.gz" -C "$backup_location/$vm/" -- *.{xml,fd,img,qcow2}
+					# create list of files to be backed up.
+					backup_file_list="$backup_location/$vm/backup_file_list.txt"
+
+					# remove any existing list of files to be backup and create a blank backup file list.
+					if [[ -f "$backup_file_list" ]]; then
+    					rm "$backup_file_list"
+					fi
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: creating blank backup file list at $backup_file_list." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					touch "$backup_file_list"
+
+					# for each extension, add it to the list of files to be backed up.
+					for extension in "${vdisk_extensions[@]}"
+					
+					do
+					
+						find "$backup_location/$vm" -type f -name '*.'"$extension" -printf "%f\n" >> "$backup_file_list"
+					
+					done
+
+					# see if config files should be backed up and then add any to to the list of files to be backed up.
+					if [[ "$backup_xml" -eq 1 ]]; then
+
+						find "$backup_location/$vm" -type f -name '*.xml' -printf "%f\n" >> "$backup_file_list"
+
+					fi
+
+					# see if nvram files should be backed up and then any to to the list of files to be backed up.
+					if [[ "$backup_nvram" -eq 1 ]]; then
+
+						find "$backup_location/$vm" -type f -name '*.fd' -printf "%f\n" >> "$backup_file_list"
+
+					fi
+
+					# backup files based off of backup file list.
+					(cd "$backup_location/$vm/" && tar zcvSf "$backup_location/$vm/$vm.tar.gz" -C "$backup_location/$vm/" -T "$backup_file_list")
+
+					# remove backup file list.
+					echo "$(date '+%Y-%m-%d %H:%M') information: removing backup file list at $backup_file_list." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					rm "$backup_file_list"
 
 					echo "$(date '+%Y-%m-%d %H:%M') information: finished creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 					
-					# remove xml, nvram, and image files.
-					find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.fd" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -fv {} \;
+					# remove config, nvram, and image files that were compressed.
+					# unset array remove_old_files_cmd.
+					unset remove_old_files_cmd
+					# initialize remove_old_files_cmd as empty array.
+					remove_old_files_cmd=()
+					
+					# find each vdisk extension and use it to build a remove command.
+					for extension in "${vdisk_extensions[@]}"
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: removing xml, nvram, and image files after tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					do
+
+						# check to see if remove command is empty.
+						if [ ${#remove_old_files_cmd[@]} -eq 0 ]; then
+
+							# build intial remove command.
+							remove_old_files_cmd=(find)
+							remove_old_files_cmd+=("$backup_location/$vm/")
+							remove_old_files_cmd+=(-type f)
+							remove_old_files_cmd+=(\()
+							remove_old_files_cmd+=(-name '*.'"$extension")
+
+						else
+
+							# add additional extensions to remove command.
+							remove_old_files_cmd+=(-or -name '*.'"$extension")
+
+						fi
+
+					done
+
+					# add config files to remove command.
+					remove_old_files_cmd+=(-or -name '*.xml')
+
+					# add nvram files to remove command.
+					remove_old_files_cmd+=(-or -name '*.fd')
+
+					# put closing parenthesis on remove command.
+					remove_old_files_cmd+=(\))
+
+					# add delete command to remove command.
+					remove_old_files_cmd+=(-delete)
+					
+					# execute remove_old_files_cmd to delelte files that were compressed.
+					"${remove_old_files_cmd[@]}"
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: removed xml, nvram, and image files that were compressed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				else
 
-					echo "$(date '+%Y-%m-%d %H:%M') warning: could not find new image and/or xml files. backup may have failed. not removing existing tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+					echo "$(date '+%Y-%m-%d %H:%M') warning: could not find new files to backup. backup may have failed. not removing existing tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 					if [ "$send_notifications" -eq 1 ]; then
 
-						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "no new image files for $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: could not find new image and/or xml files. backup may have failed. not removing existing tarball."
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "no new image files for $vm" -i "warning" -m "$(date '+%Y-%m-%d %H:%M') warning: could not find new files to backup. backup may have failed. not removing existing tarball."
 
 					fi
 
@@ -2242,18 +2803,100 @@ do
 
 			else
 
-				# create compressed tarball with ALL xml, nvram, and image files.
+				# create compressed tarball with ALL config, nvram, and image files.
 
 				echo "$(date '+%Y-%m-%d %H:%M') information: started creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-				cd "$backup_location/$vm/" && tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" -- *.{xml,fd,img,qcow2}
+				# create list of files to be backed up.
+				backup_file_list="$backup_location/$vm/backup_file_list.txt"
+
+				# remove any existing list of files to be backup and create a blank file.
+				if [[ -f "$backup_file_list" ]]; then
+					rm "$backup_file_list"
+				fi
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: creating blank backup file list at $backup_file_list." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				touch "$backup_file_list"
+
+				# for each extension, add it to the list of files to be backed up.
+				for extension in "${vdisk_extensions[@]}"
+				
+				do
+				
+					find "$backup_location/$vm" -type f -name '*.'"$extension" -printf "%f\n" >> "$backup_file_list"
+				
+				done
+
+				# see if config files should be backed up and then add any to to the list of files to be backed up.
+				if [[ "$backup_xml" -eq 1 ]]; then
+
+					find "$backup_location/$vm" -type f -name '*.xml' -printf "%f\n" >> "$backup_file_list"
+
+				fi
+
+				# see if nvram files should be backed up and then any to to the list of files to be backed up.
+				if [[ "$backup_nvram" -eq 1 ]]; then
+
+					find "$backup_location/$vm" -type f -name '*.fd' -printf "%f\n" >> "$backup_file_list"
+
+				fi
+
+				# backup files based off of backup file list.
+				(cd "$backup_location/$vm/" && tar zcvSf "$backup_location/$vm/$timestamp$vm.tar.gz" -C "$backup_location/$vm/" -T "$backup_file_list")
+
+				# remove backup file list.
+				echo "$(date '+%Y-%m-%d %H:%M') information: removing backup file list at $backup_file_list." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				rm "$backup_file_list"
 
 				echo "$(date '+%Y-%m-%d %H:%M') information: finished creating new tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 				
-				# remove xml, nvram, and image files.
-				find "$backup_location/$vm/" -type f \( -name "*.xml" -or -name "*.fd" -or -name "*.img" -or -name "*.qcow2" \) -exec rm -fv {} \;
 
-				echo "$(date '+%Y-%m-%d %H:%M') information: removing xml, nvram, and image files after tarball." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				# remove config, nvram, and image files that were compressed.
+				# unset array remove_old_files_cmd.
+				unset remove_old_files_cmd
+				# initialize remove_old_files_cmd as empty array.
+				remove_old_files_cmd=()
+				
+				# find each vdisk extension and use it to build a remove command.
+				for extension in "${vdisk_extensions[@]}"
+
+				do
+
+					# check to see if remove command is empty.
+					if [ ${#remove_old_files_cmd[@]} -eq 0 ]; then
+
+						# build intial remove command.
+						remove_old_files_cmd=(find)
+						remove_old_files_cmd+=("$backup_location/$vm/")
+						remove_old_files_cmd+=(-type f)
+						remove_old_files_cmd+=(\()
+						remove_old_files_cmd+=(-name '*.'"$extension")
+
+					else
+
+						# add additional extensions to remove command.
+						remove_old_files_cmd+=(-or -name '*.'"$extension")
+
+					fi
+
+				done
+
+				# add config files to remove command.
+				remove_old_files_cmd+=(-or -name '*.xml')
+
+				# add nvram files to remove command.
+				remove_old_files_cmd+=(-or -name '*.fd')
+
+				# put closing parenthesis on remove command.
+				remove_old_files_cmd+=(\))
+
+				# add delete command to remove command.
+				remove_old_files_cmd+=(-delete)
+				
+				# execute remove_old_files_cmd to delelte files that were compressed.
+				"${remove_old_files_cmd[@]}"
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: removed xml, nvram, and image files that were compressed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 			fi
 
@@ -2355,83 +2998,161 @@ do
 		fi
 
 		# create variable equal to number_of_days_to_keep_backups plus one to make sure that there are files younger than the cutoff date.
-		days_plus_1=$((number_of_days_to_keep_backups + 1))
+		days_plus_one=$((number_of_days_to_keep_backups + 1))
 
 		for j in $backup_location/$vm/
 
 		do
 
-			# remove old xml files.
-			if [[ -n $(find "$j" -type f \( -name "*.xml" \) -mmin -$((days_plus_1*24*60))) ]]; then
+			# remove old config files if backup_xml is 1.
+			if [ "$backup_xml" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.xml' \) -mmin -$((days_plus_one*24*60))) ]]; then
 
 				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					deleted_files=$(find "$j" -type f \( -name "*.xml" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+					deleted_files=$(find "$j" -type f \( -name '*.xml' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					if [[ -n "$deleted_files" ]]; then
+			
+						echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "script removing xmls" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "script removing xmls" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+					else
+
+						echo "$(date '+%Y-%m-%d %H:%M') information: did not find any config files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "script removing xmls" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any config files to remove"
+
+					fi
 
 				else
 
-					find "$j" -type f \( -name "*.xml" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name '*.xml' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
 
 				fi
 
 			fi
 
-			# remove old nvram files.
-			if [[ -n $(find "$j" -type f \( -name "*.fd" \) -mmin -$((days_plus_1*24*60))) ]]; then
+			# remove old nvram files if backup_nvram is 1.
+			if [ "$backup_nvram" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.fd' \) -mmin -$((days_plus_one*24*60))) ]]; then
 
 				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					deleted_files=$(find "$j" -type f \( -name "*.fd" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+					deleted_files=$(find "$j" -type f \( -name '*.fd' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					if [[ -n "$deleted_files" ]]; then
+			
+						echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_nvrams" -s "unRAID VM Backup script" -d "script removing nvrams" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_nvrams" -s "unRAID VM Backup script" -d "script removing nvrams" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+					else
+
+						echo "$(date '+%Y-%m-%d %H:%M') information: did not find any nvram files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_nvrams" -s "unRAID VM Backup script" -d "script removing nvrams" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any nvram files to remove"
+
+					fi
 
 				else
 
-					find "$j" -type f \( -name "*.fd" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name '*.fd' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
 
 				fi
 
 			fi
 
-			# remove old vdisk files.
-			if [[ -n $(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin -$((days_plus_1*24*60))) ]]; then
+			# remove old images if backup_vdisks is 1.
+			if [ "$backup_vdisks" -eq 1 ]; then
 
-				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+				# unset array vdisk_extensions_find_cmd.
+				unset vdisk_extensions_find_cmd
+				# initialize vdisk_extensions_find_cmd as empty array.
+				vdisk_extensions_find_cmd=()
 
-					deleted_files=$(find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+				# find each vdisk extension and use it to build a find command.
+				for extension in "${vdisk_extensions[@]}"
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+				do
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+					# check to see if find command is empty.
+					if [ ${#vdisk_extensions_find_cmd[@]} -eq 0 ]; then
 
-				else
+						# build intial find command.
+						vdisk_extensions_find_cmd=(find)
+						vdisk_extensions_find_cmd+=("$j")
+						vdisk_extensions_find_cmd+=(-type f)
+						vdisk_extensions_find_cmd+=(\()
+						vdisk_extensions_find_cmd+=(-name '*.'"$extension")
+
+					else
+
+						# add additional extensions to find command.
+						vdisk_extensions_find_cmd+=(-or -name '*.'"$extension")
+
+					fi
+					
+				done
+
+				# put closing parenthesis on find command.
+				vdisk_extensions_find_cmd+=(\))
+
+
+				# remove old images.
+				if [[ -n $("${vdisk_extensions_find_cmd[@]}" -mmin -$((days_plus_one*24*60))) ]]; then
+
+					if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+						deleted_files=$("${vdisk_extensions_find_cmd[@]}" -mmin +$((number_of_days_to_keep_backups*14*60)) -delete -print)
+
+						if [[ -n "$deleted_files" ]]; then
 				
-					find "$j" -type f \( -name "*.img" -or -name "*.qcow2" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
-				
+							echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+						else
+
+							echo "$(date '+%Y-%m-%d %H:%M') information: did not find any image files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+							/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any image files to remove"
+
+						fi
+
+					else
+					
+						"${vdisk_extensions_find_cmd[@]}" -mmin +$((number_of_days_to_keep_backups*14*60)) -delete
+					
+					fi
+
 				fi
 
 			fi
 
-			# remove old tarballs.
-			if [[ -n $(find "$j" -type f \( -name "*.tar.gz" \) -mmin -$((days_plus_1*24*60))) ]]; then
+			# remove old tarballs if compress_backups is 1.
+			if [ "$compress_backups" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.tar.gz' \) -mmin -$((days_plus_one*24*60))) ]]; then
 				
 				if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-					deleted_files=$(find "$j" -type f \( -name "*.tar.gz" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;)
+					deleted_files=$(find "$j" -type f \( -name '*.tar.gz' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
 
-					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+					if [[ -n "$deleted_files" ]]; then
+			
+						echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "script removing tarballs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "script removing tarballs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+					else
+
+						echo "$(date '+%Y-%m-%d %H:%M') information: did not find any compressed files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+						/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "script removing tarballs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any compressed files to remove"
+
+					fi
 
 				else
 
-					find "$j" -type f \( -name "*.tar.gz" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -exec rm -fv {} \;
+					find "$j" -type f \( -name '*.tar.gz' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
 
 				fi
 
@@ -2457,12 +3178,12 @@ do
 		fi
 
 		# create variable equal to number_of_backups_to_keep plus one to make sure that the correct number of files are kept.
-		backups_plus_1=$((number_of_backups_to_keep + 1))
+		backups_plus_one=$((number_of_backups_to_keep + 1))
 		
-		# remove xml files that are over the limit.
-		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+		# remove config files that are over the limit if backup_xml is 1.
+		if [ "$backup_xml" -eq 1 ] && [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
@@ -2470,24 +3191,34 @@ do
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "script removing xmls" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any config files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_xmls" -s "unRAID VM Backup script" -d "script removing xmls" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any config files to remove"
+
 			fi
 
-		else
+		elif [ "$backup_xml" -eq 1 ]; then
 
-			deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
 				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any config files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
 			fi
 
 		fi
 
-		# remove nvram files that are over the limit.
-		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+		# remove nvram files that are over the limit if backup_nvram is 1.
+		if [ "$backup_nvram" -eq 1 ] && [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
@@ -2495,82 +3226,167 @@ do
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_nvrams" -s "unRAID VM Backup script" -d "script removing nvrams" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any nvram files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_nvrams" -s "unRAID VM Backup script" -d "script removing nvrams" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any nvram files to remove"
+
 			fi
 
-		else
+		elif [ "$backup_nvram" -eq 1 ]; then
 
-			deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
 				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any nvram files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 			fi
 		
 		fi
 
-		# remove image files that are over the limit.
-		# get number of vdisks
-		numberofvdisks="1"
-		vdisknumberextregex="[0-9]+\\.(img|qcow2)"
-		vdisknumberonlyregex="[0-9]+"
+		# remove image files that are over the limit if backup_vdisks is 1.
+		if [ "$backup_vdisks" -eq 1 ]; then
 
-		for imagefilename in "$backup_location/$vm/"*.{img,qcow2}
+			# initialize variables to find number of vdisks
+			numberofvdisks="1"
 
-		do
+			# find each vdisk extension and use it to build a regular expression to get a vdisk's trailing number.
+			for extension in "${vdisk_extensions[@]}"
 
-			# get highest number from vdisk count
-			if [[ $imagefilename =~ $vdisknumberextregex ]]; then
+			do
 
-				imagefilenamenumberext=${BASH_REMATCH[0]}
+				# check to see if regular expression is empty.
+				if [ "$vdisknumberextregex" == "" ]; then
+
+					# build intial regular expression.
+					vdisknumberextregex='[0-9]+\.('
+					vdisknumberextregex="${vdisknumberextregex}$extension"
+
+				else
+
+					# add additional extensions to regular expression.
+					vdisknumberextregex="${vdisknumberextregex}|$extension"
+
+				fi
 				
-				if [[ $imagefilenamenumberext =~ $vdisknumberonlyregex ]]; then
+			done
 
-					vdisk_numberonly=${BASH_REMATCH[0]}
+			# put closing parenthesis on regular expression.
+			vdisknumberextregex="${vdisknumberextregex})"
+
+			vdisknumberonlyregex="[0-9]+"
+
+			# get number of vdisks
+			for imagefilename in "$backup_location/$vm/"*
+
+			do
+
+				# get highest number from vdisk count
+				if [[ $imagefilename =~ $vdisknumberextregex ]]; then
+
+					imagefilenamenumberext=${BASH_REMATCH[0]}
+					
+					if [[ $imagefilenamenumberext =~ $vdisknumberonlyregex ]]; then
+
+						vdisk_numberonly=${BASH_REMATCH[0]}
+
+					fi
+
+				fi
+
+				if [ "$numberofvdisks" -lt "$vdisk_numberonly" ]; then
+
+					numberofvdisks="$vdisk_numberonly"
+
+				fi
+
+			done
+
+			# create variable equal to number_of_backups_to_keep, times the number of vdisks, plus one; to make sure that the correct number of files are kept.
+			vdiskbackups_plus_one=$(((number_of_backups_to_keep * numberofvdisks) + 1))
+
+			# unset array vdisk_extensions_find_cmd.
+			unset vdisk_extensions_find_cmd
+			# initialize vdisk_extensions_find_cmd as empty array.
+			vdisk_extensions_find_cmd=()
+			
+			# find each vdisk extension and use it to build a find command.
+			for extension in "${vdisk_extensions[@]}"
+
+			do
+
+				# check to see if find command is empty.
+				if [ ${#vdisk_extensions_find_cmd[@]} -eq 0 ]; then
+
+					# build intial find command.
+					vdisk_extensions_find_cmd=(find)
+					vdisk_extensions_find_cmd+=("$backup_location/$vm/")
+					vdisk_extensions_find_cmd+=(-type f)
+					vdisk_extensions_find_cmd+=(\()
+					vdisk_extensions_find_cmd+=(-name '*.'"$extension")
+
+				else
+
+					# add additional extensions to find command.
+					vdisk_extensions_find_cmd+=(-or -name '*.'"$extension")
+
+				fi
+				
+			done
+
+			# put closing parenthesis on find command.
+			vdisk_extensions_find_cmd+=(\))
+
+			# add printf to find command.
+			vdisk_extensions_find_cmd+=(-printf '%T@\t%p\n')
+
+			# remove image files that are over the limit.
+			if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+
+				deleted_files=$("${vdisk_extensions_find_cmd[@]}" | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+				if [[ -n "$deleted_files" ]]; then
+				
+					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
+
+				else
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: did not find any image files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+					/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any image files to remove"
+
+				fi
+
+			else
+
+				deleted_files=$("${vdisk_extensions_find_cmd[@]}" | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+
+				if [[ -n "$deleted_files" ]]; then
+				
+					echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				else
+
+					echo "$(date '+%Y-%m-%d %H:%M') information: did not find any image files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 				fi
 
 			fi
 
-			if [ "$numberofvdisks" -lt "$vdisk_numberonly" ]; then
-
-				numberofvdisks="$vdisk_numberonly"
-
-			fi
-
-		done
-
-		# create variable equal to number_of_backups_to_keep, times the number of vdisks, plus one; to make sure that the correct number of files are kept.
-		vdiskbackups_plus_1=$(((number_of_backups_to_keep * numberofvdisks) + 1))
-
-		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-			if [[ -n "$deleted_files" ]]; then
-			
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_vdisks" -s "unRAID VM Backup script" -d "script removing vdisks" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
-
-			fi
-
-		else
-
-			deleted_files=$(find "$backup_location/$vm/"*.{img,qcow2} -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-			if [[ -n "$deleted_files" ]]; then
-			
-				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
-
-			fi
-
 		fi
 
-		# remove tar.gz files that are over the limit.
-		if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
+		# remove tar.gz files that are over the limit if compress_backups is 1.
+		if [ "$compress_backups" -eq 1 ] && [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-			deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
@@ -2578,15 +3394,25 @@ do
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "script removing tarballs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any compressed files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_tarballs" -s "unRAID VM Backup script" -d "script removing tarballs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any compressed files to remove"
+
 			fi
 
-		else
+		elif [ "$compress_backups" -eq 1 ]; then
 
-			deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+			deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
 			if [[ -n "$deleted_files" ]]; then
 			
 				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any compressed files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 			fi
 
@@ -2633,6 +3459,12 @@ if [ "$keep_log_file" -eq 1 ]; then
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_logs" -s "unRAID VM Backup script" -d "script removing logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any log files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_logs" -s "unRAID VM Backup script" -d "script removing logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any log files to remove"
+
 			fi
 
 		else
@@ -2642,6 +3474,10 @@ if [ "$keep_log_file" -eq 1 ]; then
 			if [[ -n "$deleted_files" ]]; then
 
 				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any log files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 			fi
 
@@ -2676,6 +3512,12 @@ if [ "$keep_error_log_file" -eq 1 ]; then
 
 				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_error_logs" -s "unRAID VM Backup script" -d "script removing error logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: $deleted_files"
 
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any error log files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+				/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_remove_error_logs" -s "unRAID VM Backup script" -d "script removing error logs" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: did not find any error log files to remove"
+
 			fi
 		
 		else
@@ -2685,6 +3527,10 @@ if [ "$keep_error_log_file" -eq 1 ]; then
 			if [[ -n "$deleted_files" ]]; then
 
 				echo "$(date '+%Y-%m-%d %H:%M') information: $deleted_files" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+			else
+
+				echo "$(date '+%Y-%m-%d %H:%M') information: did not find any error log files to remove." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 			fi
 
@@ -2703,6 +3549,8 @@ if [ "$errors" -eq 1 ]; then
 
 	# get rsync result and send notification
 	if [[ $? -eq 1 ]]; then
+
+		echo "$(date '+%Y-%m-%d %H:%M') failure: $backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log create failed." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 		if [ "$send_notifications" -eq 1 ]; then
 
@@ -2761,7 +3609,7 @@ fi
 
 if [ "$errors" -eq 1 ] && [ "$keep_error_log_file" -eq 1 ]; then
 
-	echo "$(date '+%Y-%m-%d %H:%M')" " Stop logging to log file."  | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
+	echo "$(date '+%Y-%m-%d %H:%M')" " Stop logging to error log file."  | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
 
 fi
 
@@ -2787,8 +3635,11 @@ exit 0
 
 # Originally from unraid-autovmbackup by Daniel Jackson (danioj)
 # Includes additions for removing old backups added by Deeks
+# Includes additions for creating snapshots added by thies88
 
 # for original script go to:
 # https://lime-technology.com/forum/index.php?topic=47986
 # for Deeks script go to:
 # https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821
+# for thies88 script go to:
+# https://github.com/thies88/unraid-vmbackup
