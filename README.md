@@ -1,6 +1,6 @@
 # unraid-vmbackup
 
-v1.1.5 - TESTING
+v1.1.5 - 2019/11/21
 
 Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-technology.com/forums/topic/48286-plugin-ca-user-scripts/ "CA User Scripts") for more information.
 
@@ -17,6 +17,8 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 
 - Set the variables in the script file.
 
+  - be sure to set enabled = "1" to ensure that the script will run.
+
 - Choose a schedule in the CA User Scripts plugin.
 
 ### Script options
@@ -26,6 +28,10 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 - List VMs to be backed up.
 
 - List specific vdisks to skip, if any.
+
+- List specific vdisk extensions to skip, if any (iso listed by default).
+
+- Option to use snapshots to backup VMs without shutting down. Changes will need to be made to VM config before enabling.
 
 - Option to kill a VM that won't shutdown cleanly.
 
@@ -69,6 +75,8 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 
 - Option to only use rsync.
 
+- Advanced: Option to keep specific VMs running during backup. Not recommended.
+
 - Advanced: Option to enable reconstruct write during backups.
 
 - Advanced: Option to compare files and retry backup in the event of failure.
@@ -78,8 +86,6 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 - Advanced: Option to skip backing up nvram.
 
 - Advanced: Option to skip backing up vdisks.
-
-- Advanced: Option to ignore iso files when checking for valid vdisks.
 
 - Advanced: Choose the number of times to check if a VM is shut down.
 
@@ -91,4 +97,6 @@ I do not make any guarantees as to the function of this script. It is provided a
 
 ###### Originally from unraid-autovmbackup by Daniel Jackson (danioj) [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/ "unraid-autovmbackup")
 
-###### Includes additions for removing old backups added by Deeks [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821 "unraid-autovmbackup Deek's script")
+###### Includes additions for removing old backups added by Deeks [here](https://lime-technology.com/forums/topic/46281-unraid-autovmbackup-automate-backup-of-virtual-machines-in-unraid-v04/?do=findComment&comment=589821 "unraid-autovmbackup Deeks' script")
+
+###### Includes additions for creating snapshots added by thies88 [here](https://github.com/thies88/unraid-vmbackup "unraid-vmbackup thies88's script")
