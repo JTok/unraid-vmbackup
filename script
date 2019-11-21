@@ -3,7 +3,7 @@
 #arrayStarted=true
 #noParity=true
 
-# v1.1.5 - TESTING
+# v1.1.5 - 2019/11/21
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -32,12 +32,6 @@ backup_location="/mnt/user/share/backup_folder/"
 vms_to_backup="
 vm1
 vm2
-"
-
-# list of vms that will be backed up WITHOUT first shutting down separated by a new line. These must also be listed in vms_to_backup.
-# NOTE: vms backed up via snapshot will not be shutdown (see use_snapshots option).
-# WARNING: using this setting can result in an unusable backup. recommend to not use.
-vms_to_backup_running="
 "
 
 # list of specific vdisks to be skipped. use the full path.
@@ -97,6 +91,12 @@ detailed_notifications="0"
 
 
 #### advanced variables ####
+
+# list of vms that will be backed up WITHOUT first shutting down separated by a new line. These must also be listed in vms_to_backup.
+# NOTE: vms backed up via snapshot will not be shutdown (see use_snapshots option).
+# WARNING: using this setting can result in an unusable backup. not recommended.
+vms_to_backup_running="
+"
 
 # default is 0. set to 1 to have reconstruct write (a.k.a. turbo write) enabled during the backup and then disabled after the backup completes.
 # NOTE: may break auto functionality when it is implemented. do not use if reconstruct write is already enabled. backups may run faster with this enabled.
@@ -1160,8 +1160,8 @@ do
 	fi
 
 
-	# see if vdisks should be backed up, if the number of backups is more than 1, and if disable delta sync is disabled.
-	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
+	# see if vdisks should be backed up, if the number of backups is more than 1, if snapshots are being used, and if disable delta sync is disabled.
+	if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$use_snapshots" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
 
 		# dump the vm config locally first.
 		virsh dumpxml "$vm" > "$vm.xml"
@@ -2166,12 +2166,12 @@ do
 									if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
 
 										# if it is, set the command to make a snapshot.
-										snapshot_cmd+=(--diskspec "$vdisk_spec",file="$disk_directory/$snap_name",snapshot=external)
+										snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
 
 									else
 
 										# if it is not, set the command to not make a snapshot.
-										snapshot_cmd+=(--diskspec "$vdisk_spec",snapshot=no)
+										snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
 
 									fi
 
@@ -2182,12 +2182,12 @@ do
 									if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
 
 										# if it is, set the command to make a snapshot.
-										snapshot_cmd+=(--diskspec "$vdisk_spec",file="$disk_directory/$snap_name",snapshot=external)
+										snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
 
 									else
 
 										# if it is not, set the command to not make a snapshot.
-										snapshot_cmd+=(--diskspec "$vdisk_spec",snapshot=no)
+										snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
 
 									fi
 
@@ -2210,27 +2210,41 @@ do
 							# create snapshot
 							if ! "${snapshot_cmd[@]}"; then
 
-								echo "$(date '+%Y-%m-%d %H:%M') failure: creating snapshot $snap_name for $vm did not finish successfully." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+								snapshot_succeeded=false
+								
+								echo "$(date '+%Y-%m-%d %H:%M') failure: snapshot command failed on $snap_name for $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
 
 								if [ "$send_notifications" -eq 1 ]; then
 
-									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: creating snapshot $snap_name for $vm did not finish successfully."
+									/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') failure: snapshot command failed on $snap_name for $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm."
 
 								fi
 
+								# break out of current vdisk loop to prevent potential data loss.
+								break
+
 							else
 
-								echo "$(date '+%Y-%m-%d %H:%M') information: created snapshot $snap_name for $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+								snapshot_succeeded=true
+
+								echo "$(date '+%Y-%m-%d %H:%M') information: snapshot command succeeded on $snap_name for $vm." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
 							fi
 
-							snapshot_performed=true
-
 						else
 
-							echo "$(date '+%Y-%m-%d %H:%M') information: unable to perform snapshot for disk $disk on $vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+							snapshot_succeeded=false
 
-							snapshot_performed=false
+							echo "$(date '+%Y-%m-%d %H:%M') failure: unable to perform snapshot for disk $disk on $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log" && errors="1"
+
+							if [ "$send_notifications" -eq 1 ]; then
+
+								/usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_vm_backup" -s "unRAID VM Backup script" -d "copy $vm backup failed" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') unable to perform snapshot for disk $disk on $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}."
+
+							fi
+
+							# break out of current vdisk loop to prevent potential data loss.
+							break
 
 						fi
 
@@ -2455,8 +2469,8 @@ do
 
 						fi
 
-						# check to see if snapshot was created
-						if [[ "$snapshot_performed" = true ]]; then
+						# check to see if snapshot was created6
+						if [[ "$snapshot_succeeded" = true ]]; then
 
 							# verify vm is still running before attempting to commit changes from snapshot.
 							if [ "$vm_state" == "running" ]; then
@@ -2498,6 +2512,13 @@ do
 				fi
 
 			done
+
+			# check to see if the snapshot failed for the current vdisk. if so, continue to the next vm to prevent data loss.
+			if [ "$snapshot_succeeded" = false ]; then
+
+				continue
+
+			fi
 
 		fi
 
