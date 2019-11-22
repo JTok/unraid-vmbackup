@@ -9,3 +9,4 @@
 #  - test case where vdisk1 does not exist.
 #  - option to revert back to traditional backup if snapshot fails.
 #  - handle errors that appear in system log more gracefully.
+#  - allow custom snapshot extension.
