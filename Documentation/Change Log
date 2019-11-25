@@ -7,6 +7,7 @@
 #  - added option to choose different snapshot extension.
 #  - added option to allow all vms to be backed up without having to explicitly list them.
 #  - added support for pulling nvram extension from the config file.
+#  - fixed 'integer expression expected' error when performing regular expression integer comparisons.
 
 # v1.1.5 - 2019/11/21
 #  In Loving Memory of Net Neutrality
