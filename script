@@ -673,7 +673,7 @@ me=$(basename "$0")
               if [[ -f "$disk_directory/$snap_name" ]]; then
 
                 # if it does, forcibly remove it.
-                rm -f "$disk_directory/$snap_name"
+                rm -fv "$disk_directory/$snap_name"
                 log_message "information: forcibly removed snapshot $disk_directory/$snap_name for $vm."
               fi
 
@@ -760,7 +760,7 @@ me=$(basename "$0")
     remove_old_files_cmd+=(-or -name '*.xml')
 
     # add nvram files to remove command.
-    remove_old_files_cmd+=(-or -name '*.fd')
+    remove_old_files_cmd+=(-or -name '*.'"$nvram_extension")
 
     # put closing parenthesis on remove command.
     remove_old_files_cmd+=(\))
@@ -1683,6 +1683,11 @@ do
 
   fi
 
+  # see if a config file exists for the vm already and remove it.
+  if [ -f "$vm.xml" ]; then
+    rm -fv "$vm.xml"
+  fi
+
   # dump the vm config locally.
   virsh dumpxml "$vm" > "$vm.xml"
 
@@ -1927,6 +1932,9 @@ do
       # get nvram file name from path.
       nvram_filename=$(basename "$nvram_path")
 
+      # get nvram file extension from filename.
+      nvram_extension="${nvram_filename##*.}"
+
       # check to see if nvram_path is empty.
       if [ -z "$nvram_path" ]; then
 
@@ -2056,7 +2064,7 @@ do
         fi
 
         # make sure new nvram files exist before removing existing tarball
-        if [[ "$backup_nvram" -eq 1 ]] && [[ -n $(find "$backup_location/$vm" -type f \( -name '*.fd' \) ) ]]; then
+        if [[ "$backup_nvram" -eq 1 ]] && [[ -n $(find "$backup_location/$vm" -type f \( -name '*.'"$nvram_extension" \) ) ]]; then
 
           new_nvram_files_exist=true
 
@@ -2116,7 +2124,7 @@ do
           # see if nvram files should be backed up and then any to to the list of files to be backed up.
           if [[ "$backup_nvram" -eq 1 ]]; then
 
-            find "$backup_location/$vm" -type f -name '*.fd' -printf "%f\n" >> "$backup_file_list"
+            find "$backup_location/$vm" -type f -name '*.'"$nvram_extension" -printf "%f\n" >> "$backup_file_list"
 
           fi
 
@@ -2180,7 +2188,7 @@ do
         # see if nvram files should be backed up and then any to to the list of files to be backed up.
         if [[ "$backup_nvram" -eq 1 ]]; then
 
-          find "$backup_location/$vm" -type f -name '*.fd' -printf "%f\n" >> "$backup_file_list"
+          find "$backup_location/$vm" -type f -name '*.'"$nvram_extension" -printf "%f\n" >> "$backup_file_list"
 
         fi
 
@@ -2282,11 +2290,11 @@ do
       fi
 
       # remove old nvram files if backup_nvram is 1.
-      if [ "$backup_nvram" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.fd' \) -mmin -$((days_plus_one*24*60))) ]]; then
+      if [ "$backup_nvram" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.'"$nvram_extension" \) -mmin -$((days_plus_one*24*60))) ]]; then
 
         if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-          deleted_files=$(find "$j" -type f \( -name '*.fd' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
+          deleted_files=$(find "$j" -type f \( -name '*.'"$nvram_extension" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
 
           if [[ -n "$deleted_files" ]]; then
       
@@ -2300,7 +2308,7 @@ do
 
         else
 
-          find "$j" -type f \( -name '*.fd' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
+          find "$j" -type f \( -name '*.'"$nvram_extension" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
 
         fi
 
@@ -2414,7 +2422,7 @@ do
     # remove nvram files that are over the limit if backup_nvram is 1.
     if [ "$backup_nvram" -eq 1 ] && [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
 
-      deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+      deleted_files=$(find "$backup_location/$vm/"*."$nvram_extension" -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
       if [[ -n "$deleted_files" ]]; then
       
@@ -2428,7 +2436,7 @@ do
 
     elif [ "$backup_nvram" -eq 1 ]; then
 
-      deleted_files=$(find "$backup_location/$vm/"*.fd -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+      deleted_files=$(find "$backup_location/$vm/"*."$nvram_extension" -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
       if [[ -n "$deleted_files" ]]; then
       
