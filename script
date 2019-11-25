@@ -2500,9 +2500,13 @@ do
 
         fi
 
-        if [ "$numberofvdisks" -lt "$vdisk_numberonly" ]; then
+        if [[ "$numberofvdisks" =~ ^[0-9]+$ ]] && [[ "$vdisk_numberonly" =~ ^[0-9]+$ ]]; then
 
-          numberofvdisks="$vdisk_numberonly"
+          if [ "$numberofvdisks" -lt "$vdisk_numberonly" ]; then
+
+            numberofvdisks="$vdisk_numberonly"
+
+          fi
 
         fi
 
