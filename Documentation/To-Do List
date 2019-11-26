@@ -3,5 +3,5 @@
 #  - possible to make into a plugin?
 #  - option to backup vdisks using full paths. will resolve issues with unique names.
 #  - test case where vdisk1 does not exist.
-#  - option to revert back to traditional backup if snapshot fails.
+#  - option to pause instead of shutdown vms.
 #  - plugin/script for enabling and disabling snapshots on specific vm for testing?
