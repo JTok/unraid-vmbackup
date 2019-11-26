@@ -38,14 +38,14 @@ vm1
 vm2
 "
 
-# list of specific vdisks to be skipped. use the full path.
+# list of specific vdisks to be skipped separated by a new line. use the full path.
 # NOTE: must match path in vm config file.
 vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk2.img
 /mnt/user/domains/vm1/vdisk3.img
 "
 
-# list of specific vdisk extensions to be skipped. this replaces the old ignore_isos variable.
+# list of specific vdisk extensions to be skipped separated by a new line. this replaces the old ignore_isos variable.
 vdisk_extensions_to_skip="
 iso
 "
