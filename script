@@ -23,136 +23,138 @@ me=$(basename "$0")
 
 ################################################## script variables start ######################################################
 
-  # default 0 but set the master switch to 1 if you want to enable the script otherwise it will not run.
-  enabled="0"
+# default 0 but set the master switch to 1 if you want to enable the script otherwise it will not run.
+enabled="0"
 
-  # backup location to put vdisks.
-  backup_location="/mnt/user/share/backup_folder/"
+# backup location to put vdisks.
+backup_location="/mnt/user/share/backup_folder/"
 
-  # default is 0. backup all vms or use vms_to_backup. when set to 1, vms_to_backup will be ignored.
-  backup_all_vms="0"
+# default is 0. backup all vms or use vms_to_backup. when set to 1, vms_to_backup will be ignored.
+backup_all_vms="0"
 
-  # list of vms that will be backed up separated by a new line.
-  vms_to_backup="
-  vm1
-  vm2
-  "
+# list of vms that will be backed up separated by a new line.
+vms_to_backup="
+vm1
+vm2
+"
 
-  # list of specific vdisks to be skipped. use the full path.
-  # NOTE: must match path in vm config file.
-  vdisks_to_skip="
-  /mnt/user/domains/vm1/vdisk2.img
-  /mnt/user/domains/vm1/vdisk3.img
-  "
+# list of specific vdisks to be skipped. use the full path.
+# NOTE: must match path in vm config file.
+vdisks_to_skip="
+/mnt/user/domains/vm1/vdisk2.img
+/mnt/user/domains/vm1/vdisk3.img
+"
 
-  # list of specific vdisk extensions to be skipped. this replaces the old ignore_isos variable.
-  vdisk_extensions_to_skip="
-  iso
-  "
+# list of specific vdisk extensions to be skipped. this replaces the old ignore_isos variable.
+vdisk_extensions_to_skip="
+iso
+"
 
-  # use snapshots to backup vms.
-  # NOTE: vms that are backed up using snapshots will not be shutdown. if a vm is already shutdown the default backup method will be used.
-  # WARNING: this will fail if the config path for the virtual disk is /mnt/user/. you must use /mnt/cache/ or /mnt/diskX/ for snapshots to work.
-  use_snapshots="0"
+# default is 0. use snapshots to backup vms.
+# NOTE: vms that are backed up using snapshots will not be shutdown. if a vm is already shutdown the default backup method will be used.
+# NOTE: it is highly recommended that you install the qemu guest agent on your vms before using snapshots to ensure the integrity of your backups.
+# WARNING: this will fail if the config path for the virtual disk is /mnt/user/. you must use /mnt/cache/ or /mnt/diskX/ for snapshots to work.
+use_snapshots="0"
 
-  # default is 0. set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
-  kill_vm_if_cant_shutdown="0"
+# default is 0. set this to 1 if you would like to kill a vm if it cant be shutdown cleanly.
+kill_vm_if_cant_shutdown="0"
 
-  # default is 1. set this to 0 if you do not want a vm to be started if it was running before the backup started. Paused VMs will be left stopped.
-  set_vm_to_original_state="1"
+# default is 1. set this to 0 if you do not want a vm to be started if it was running before the backup started. Paused VMs will be left stopped.
+set_vm_to_original_state="1"
 
-  # default is 0. set this to the number of days backups should be kept. 0 means indefinitely.
-  number_of_days_to_keep_backups="0"
+# default is 0. set this to the number of days backups should be kept. 0 means indefinitely.
+number_of_days_to_keep_backups="0"
 
-  # default is 0. set this to the number of backups that should be kept. 0 means infinitely.
-  # WARNING: If VM has multiple vdisks, then they must end in sequential numbers in order to be correctly backed up (i.e. vdisk1.img, vdisk2.img, etc.).
-  number_of_backups_to_keep="0"
+# default is 0. set this to the number of backups that should be kept. 0 means infinitely.
+# WARNING: If VM has multiple vdisks, then they must end in sequential numbers in order to be correctly backed up (i.e. vdisk1.img, vdisk2.img, etc.).
+number_of_backups_to_keep="0"
 
-  # default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
-  # WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all config, nvram, and vdisk images in the backup directory into ONE tarball.
-  compress_backups="0"
+# default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
+# WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all config, nvram, and vdisk images in the backup directory into ONE tarball.
+compress_backups="0"
 
-  # default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
-  timestamp_files="1"
-
-
-  #### logging and notifications ####
-
-  # default is 1. set to 0 to have log file deleted after the backup has completed.
-  # NOTE: error logs are separate. settings for error logs can be found in the advanced variables.
-  keep_log_file="1"
-
-  # default is 1. number of successful log files to keep. 0 means infinitely.
-  number_of_log_files_to_keep="1"
-
-  # default is "logs". set to "" to put in root of backups folder. set to "logs/<subfolder>" to keep logs separate if running multiple versions of this script.
-  log_file_subfolder="logs"
-
-  # default is 1. set to 0 to prevent notification system from being used. Script failures that occur before logging can start, and before this variable is validated will still be sent.
-  send_notifications="1"
-
-  # default is 0. set to 1 to receive more detailed notifications. will not work with send_notifications disabled or only_send_error_notifications enabled.
-  detailed_notifications="0"
+# default is 1. set this to 0 if you would like to have backups without a timestamp. Timestamps are dropped only when number_of_backups_to_keep is equal to 1.
+timestamp_files="1"
 
 
-  #### advanced variables ####
+#### logging and notifications ####
 
-  # extension used when creating snapshots. Do not choose an extension that is the same as one of your vdisks or the script will error out. Do not include leading period. Cannot be blank.
-  snapshot_extension="snap"
-  
-  # list of vms that will be backed up WITHOUT first shutting down separated by a new line. These must also be listed in vms_to_backup.
-  # NOTE: vms backed up via snapshot will not be shutdown (see use_snapshots option).
-  # WARNING: using this setting can result in an unusable backup. not recommended.
-  vms_to_backup_running="
-  "
+# default is 1. set to 0 to have log file deleted after the backup has completed.
+# NOTE: error logs are separate. settings for error logs can be found in the advanced variables.
+keep_log_file="1"
 
-  # default is 0. set to 1 to have reconstruct write (a.k.a. turbo write) enabled during the backup and then disabled after the backup completes.
-  # NOTE: may break auto functionality when it is implemented. do not use if reconstruct write is already enabled. backups may run faster with this enabled.
-  enable_reconstruct_write="0"
+# default is 1. number of successful log files to keep. 0 means infinitely.
+number_of_log_files_to_keep="1"
 
-  # default is 0. set this to 1 to compare files after copy and run rsync in the event of failure. could add significant amount of time depending on the size of vms.
-  compare_files="0"
+# default is "logs". set to "" to put in root of backups folder. set to "logs/<subfolder>" to keep logs separate if running multiple versions of this script.
+log_file_subfolder="logs"
 
-  # default is 1. set to 0 if you would like to skip backing up xml configuration files.
-  backup_xml="1"
+# default is 1. set to 0 to prevent notification system from being used. Script failures that occur before logging can start, and before this variable is validated will still be sent.
+send_notifications="1"
 
-  # default is 1. set to 0 if you would like to skip backing up nvram files.
-  backup_nvram="1"
+# default is 0. set to 1 to receive more detailed notifications. will not work with send_notifications disabled or only_send_error_notifications enabled.
+detailed_notifications="0"
 
-  # default is 1. set to 0 if you would like to skip backing up vdisks. setting this to 0 will automatically disable compression.
-  backup_vdisks="1"
 
-  # default is 0. set this to 1 if you would like to start a vm after it has successfully been backed up. will override set_vm_to_original_state when set to 1.
-  start_vm_after_backup="0"
+#### advanced variables ####
 
-  # default is 0. set this to 1 if you would like to start a vm after it has failed to have been backed up. will override set_vm_to_original_state when set to 1.
-  start_vm_after_failure="0"
+# default is snap. extension used when creating snapshots.
+# WARNING: do not choose an extension that is the same as one of your vdisks or the script will error out. cannot be blank.
+snapshot_extension="snap"
 
-  # default is 0. set this to 1 to disable rsync delta syncs.
-  disable_delta_sync="0"
+# list of vms that will be backed up WITHOUT first shutting down separated by a new line. these must also be listed in vms_to_backup.
+# NOTE: vms backed up via snapshot will not be shutdown (see use_snapshots option).
+# WARNING: using this setting can result in an unusable backup. not recommended.
+vms_to_backup_running="
+"
 
-  # default is 0. set this to 1 to use rsync instead of cp. 
-  # NOTE: rsync was significantly slower in my tests.
-  rsync_only="0"
+# default is 0. set to 1 to have reconstruct write (a.k.a. turbo write) enabled during the backup and then disabled after the backup completes.
+# NOTE: may break auto functionality when it is implemented. do not use if reconstruct write is already enabled. backups may run faster with this enabled.
+enable_reconstruct_write="0"
 
-  # default is 1. set this to 0 if you would like to perform a dry-run backup. 
-  # WARNING: will not work unless rsync_only is set to 1. if this is set to 1 and rsync_only is set to 0, then backups will be partial and the script won't work correctly.
-  actually_copy_files="1"
+# default is 0. set this to 1 to compare files after copy and run rsync in the event of failure. could add significant amount of time depending on the size of vms.
+compare_files="0"
 
-  # default is 20. set this to the number of times you would like to check if a clean shutdown of a vm has been successful.
-  clean_shutdown_checks="20"
+# default is 1. set to 0 if you would like to skip backing up xml configuration files.
+backup_xml="1"
 
-  # default is 30. set this to the number of seconds to wait in between checks to see if a clean shutdown has been successful.
-  seconds_to_wait="30"
+# default is 1. set to 0 if you would like to skip backing up nvram files.
+backup_nvram="1"
 
-  # default is 1. set to 0 to have error log files deleted after the backup has completed.
-  keep_error_log_file="1"
+# default is 1. set to 0 if you would like to skip backing up vdisks. setting this to 0 will automatically disable compression.
+backup_vdisks="1"
 
-  # default is 10. number of error log files to keep. 0 means infinitely.
-  number_of_error_log_files_to_keep="10"
+# default is 0. set this to 1 if you would like to start a vm after it has successfully been backed up. will override set_vm_to_original_state when set to 1.
+start_vm_after_backup="0"
 
-  # default is 0. set to 1 to only send error notifications.
-  only_send_error_notifications="0"
+# default is 0. set this to 1 if you would like to start a vm after it has failed to have been backed up. will override set_vm_to_original_state when set to 1.
+start_vm_after_failure="0"
+
+# default is 0. set this to 1 to disable rsync delta syncs.
+disable_delta_sync="0"
+
+# default is 0. set this to 1 to always use rsync instead of cp.
+# NOTE: rsync was significantly slower in my tests.
+rsync_only="0"
+
+# default is 1. set this to 0 if you would like to perform a dry-run backup. 
+# NOTE: dry run will not work unless rsync_only is set to 1. if this is set to 1 rsync_only will be set to 1.
+actually_copy_files="1"
+
+# default is 20. set this to the number of times you would like to check if a clean shutdown of a vm has been successful.
+clean_shutdown_checks="20"
+
+# default is 30. set this to the number of seconds to wait in between checks to see if a clean shutdown has been successful.
+seconds_to_wait="30"
+
+# default is 1. set to 0 to have error log files deleted after the backup has completed.
+keep_error_log_file="1"
+
+# default is 10. number of error log files to keep. 0 means infinitely.
+number_of_error_log_files_to_keep="10"
+
+# default is 0. set to 1 to only send error notifications.
+only_send_error_notifications="0"
 
 ################################################## script variables end #########################################################
 
@@ -169,7 +171,10 @@ me=$(basename "$0")
     local destination="$2"
     local rsync_dry_run_option="$3"
     local sync_type="$4"
-    local rsync_only="$4"
+    local rsync_only="$5"
+    if [[ ! "$rsync_only" =~ ^[0-9]+$ ]]; then
+      local rsync_only="0"
+    fi
 
     # determine the copy command that should be ran and capture the result.
     case "$sync_type" in
@@ -180,7 +185,7 @@ me=$(basename "$0")
         ;;
 
       "sparse")
-        # poerform rsync or copy with support for sparse files.
+        # perform rsync or copy with support for sparse files.
         if [ "$rsync_only" -eq 1 ]; then
           rsync -av"$rsync_dry_run_option" --sparse "$source" "$destination"
           local copy_result="$?"
@@ -243,17 +248,22 @@ me=$(basename "$0")
 
     case "$importance" in
       "information")
-        is_error="0"
+        local is_error="0"
         ;;
       "alert")
-        is_error="1"
+        local is_error="1"
         ;;
       "warning")
-        is_error="1"
+        local is_error="1"
         ;;
+      *)
+	      local is_error="0"
+    		;;
       esac
     if [ "$description" ] && [ "$importance" ]; then
       local enable_detailed_notifications="1"
+    else
+      local enable_detailed_notifications="0"
     fi
     local force_notification="$4"
 
@@ -505,182 +515,182 @@ me=$(basename "$0")
             if [ "$extension_exists" = false ]; then
               vdisk_extensions+=("$disk_extension")
             fi
-          fi
 
-          # check to see if snapshots should be used, and if the vm is running.
-          if [ "$use_snapshots" -eq 1 ] && [ "$vm_state" == "running" ]; then
-            log_message "information: able to perform snapshot for disk $disk on $vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}"
+            # check to see if snapshots should be used, and if the vm is running.
+            if [ "$use_snapshots" -eq 1 ] && [ "$vm_state" == "running" ]; then
+              log_message "information: able to perform snapshot for disk $disk on $vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}"
 
-            # set variable for qemu agent is installed.
-            qemu_agent_installed=$(virsh qemu-agent-command "$vm" '{"execute":"guest-info"}' | grep -c "version" | awk '{ print $0 }')
+              # set variable for qemu agent is installed.
+              qemu_agent_installed=$(virsh qemu-agent-command "$vm" '{"execute":"guest-info"}' | grep -c "version" | awk '{ print $0 }')
 
-            # get directory of current disk.
-            disk_directory=$(dirname "$disk")
+              # get directory of current disk.
+              disk_directory=$(dirname "$disk")
 
-            # remove trailing slash.
-            disk_directory=${disk_directory%/}
+              # remove trailing slash.
+              disk_directory=${disk_directory%/}
 
-            # get name of current disk without extension and add snapshot extension.
-            snap_name="${new_disk%.*}.$snapshot_extension"
+              # get name of current disk without extension and add snapshot extension.
+              snap_name="${new_disk%.*}.$snapshot_extension"
 
-            # check to see if qemu agent is installed for snapshot creation command.
-            if [[ "$qemu_agent_installed" -eq 1 ]]; then
+              # check to see if qemu agent is installed for snapshot creation command.
+              if [[ "$qemu_agent_installed" -eq 1 ]]; then
 
-              # set quiesce to enabled.
-              quiesce="--quiesce"
-              log_message "information: qemu agent found. enabling quiesce on snapshot."
+                # set quiesce to enabled.
+                quiesce="--quiesce"
+                log_message "information: qemu agent found. enabling quiesce on snapshot."
 
-            else
+              else
 
-              # set quiesce to disabled.
-              quiesce=""
-              log_message "information: qemu agent not found. disabling quiesce on snapshot."
+                # set quiesce to disabled.
+                quiesce=""
+                log_message "information: qemu agent not found. disabling quiesce on snapshot."
 
-            fi
+              fi
 
-            # create snapshot command.
-            # unset array for snapshot_cmd.
-            unset snapshot_cmd
-            # initialize snapshot_cmd as empty array.
-            snapshot_cmd=()
+              # create snapshot command.
+              # unset array for snapshot_cmd.
+              unset snapshot_cmd
+              # initialize snapshot_cmd as empty array.
+              snapshot_cmd=()
 
-            # find each vdisk_spec and use it to build a snapshot command.
-            for vdisk_spec in "${vdisk_specs[@]}"
-            do
+              # find each vdisk_spec and use it to build a snapshot command.
+              for vdisk_spec in "${vdisk_specs[@]}"
+              do
 
-              # check to see if snapshot command is empty.
-              if [ ${#snapshot_cmd[@]} -eq 0 ]; then
+                # check to see if snapshot command is empty.
+                if [ ${#snapshot_cmd[@]} -eq 0 ]; then
 
-                # build intial snapshot command.
-                snapshot_cmd=(virsh)
-                snapshot_cmd+=(snapshot-create-as)
-                snapshot_cmd+=(--domain "$vm")
-                snapshot_cmd+=(--name "$vm-$snap_name")
+                  # build intial snapshot command.
+                  snapshot_cmd=(virsh)
+                  snapshot_cmd+=(snapshot-create-as)
+                  snapshot_cmd+=(--domain "$vm")
+                  snapshot_cmd+=(--name "$vm-$snap_name")
 
-                # check to see if this is the vdisk we are currently working with.
-                if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
+                  # check to see if this is the vdisk we are currently working with.
+                  if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
 
-                  # if it is, set the command to make a snapshot.
-                  snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
+                    # if it is, set the command to make a snapshot.
+                    snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
+
+                  else
+
+                    # if it is not, set the command to not make a snapshot.
+                    snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
+                  fi
 
                 else
 
-                  # if it is not, set the command to not make a snapshot.
-                  snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
+                  # add additional extensions to snapshot command.
+                  # check to see if this is the vdisk we are currently working with.
+                  if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
+
+                    # if it is, set the command to make a snapshot.
+                    snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
+
+                  else
+
+                    # if it is not, set the command to not make a snapshot.
+                    snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
+                  fi
+                fi
+              done
+
+              # add additonal options to snapshot command.
+              snapshot_cmd+=(--disk-only)
+              snapshot_cmd+=(--no-metadata)
+              snapshot_cmd+=(--atomic)
+
+              # check to see if snapshot command should include --quiesce.
+              if [ ! "$quiesce" == "" ]; then
+                snapshot_cmd+=("$quiesce")
+              fi
+
+              # create snapshot
+              if ! "${snapshot_cmd[@]}"; then
+                snapshot_succeeded=false
+                log_message "failure: snapshot command failed on $snap_name for $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm." "copy $vm backup failed" "alert"
+
+                # break out of current vdisk loop to prevent potential data loss.
+                break
+
+              else
+
+                snapshot_succeeded=true
+                log_message "information: snapshot command succeeded on $snap_name for $vm."
+              fi
+
+            elif [ "$use_snapshots" -eq 1 ] && [ "$vm_state" != "running" ]; then
+
+              log_message "information: unable to perform snapshot for disk $disk on $vm. falling back to traditional backup. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}."
+            fi
+
+            # copy or pretend to copy the vdisk to the backup location specified by the user.
+            # check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
+            if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
+              copy_file "$disk" "$backup_location/$vm/$new_disk" "$rsync_dry_run_option" "sparse" "$rsync_only"
+
+              # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
+              touch -d "now" "$backup_location/$vm/$new_disk"
+
+              # run compare function. compare will not run if compare_files is disabled.
+              run_compare "$disk" "$backup_location/$vm/$new_disk" "vdisk"
+
+            else
+
+              # check to see if an existing backup was already copied. if so, use rsync. if not, use cp.
+              if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
+                copy_file "$disk" "$backup_location/$vm/$timestamp$new_disk" "$rsync_dry_run_option" "sparse" "$rsync_only"
+
+                # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
+                touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
+
+              else
+
+                # use rsync because delta_sync was enabled.
+                copy_file "$disk" "$backup_location/$vm/$timestamp$new_disk" "$rsync_dry_run_option" "inplace" "$rsync_only"
+
+                # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
+                touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
+              fi
+
+              # run compare function. compare will not run if compare_files is disabled.
+              run_compare "$disk" "$backup_location/$vm/$timestamp$new_disk" "vdisk"
+            fi
+
+            # send a message to the user based on whether there was an actual copy or a dry-run.
+            if [ "$actually_copy_files" -eq 0 ]; then
+              log_message "information: dry-run backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+
+            else
+
+              log_message "information: backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+            fi
+
+            # check to see if snapshot was created.
+            if [[ "$snapshot_succeeded" = true ]]; then
+
+              # verify vm is still running before attempting to commit changes from snapshot.
+              if [ "$vm_state" == "running" ]; then
+
+                # commit changes from snapshot.
+                virsh blockcommit "$vm" "${vdisk_specs[$disk]}" --active --wait --verbose --pivot
+
+                # wait 5 seconds.
+                sleep 5
+                log_message "information: commited changes from snapshot for $disk on $vm."
+
+                # see if snapshot still exists.
+                if [[ -f "$disk_directory/$snap_name" ]]; then
+
+                  # if it does, forcibly remove it.
+                  rm -fv "$disk_directory/$snap_name"
+                  log_message "information: forcibly removed snapshot $disk_directory/$snap_name for $vm."
                 fi
 
               else
 
-                # add additional extensions to snapshot command.
-                # check to see if this is the vdisk we are currently working with.
-                if [ "$vdisk_spec" == "${vdisk_specs[$disk]}" ]; then
-
-                  # if it is, set the command to make a snapshot.
-                  snapshot_cmd+=(--diskspec "$vdisk_spec,file=$disk_directory/$snap_name,snapshot=external")
-
-                else
-
-                  # if it is not, set the command to not make a snapshot.
-                  snapshot_cmd+=(--diskspec "$vdisk_spec,snapshot=no")
-                fi
+                log_message "warning: snapshot performed for $vm, but vm state is $vm_state. cannot commit changes from snapshot." "script skipping $vm" "warning"
               fi
-            done
-
-            # add additonal options to snapshot command.
-            snapshot_cmd+=(--disk-only)
-            snapshot_cmd+=(--no-metadata)
-            snapshot_cmd+=(--atomic)
-
-            # check to see if snapshot command should include --quiesce.
-            if [ ! "$quiesce" == "" ]; then
-              snapshot_cmd+=("$quiesce")
-            fi
-
-            # create snapshot
-            if ! "${snapshot_cmd[@]}"; then
-              snapshot_succeeded=false
-              log_message "failure: snapshot command failed on $snap_name for $vm. skipping backup for $vm to prevent data loss. no cleanup will be performed for this vm." "copy $vm backup failed" "alert"
-
-              # break out of current vdisk loop to prevent potential data loss.
-              break
-
-            else
-
-              snapshot_succeeded=true
-              log_message "information: snapshot command succeeded on $snap_name for $vm."
-            fi
-
-          elif [ "$use_snapshots" -eq 1 ] && [ "$vm_state" != "running" ]; then
-
-            log_message "information: unable to perform snapshot for disk $disk on $vm. falling back to traditional backup. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}."
-          fi
-
-          # copy or pretend to copy the vdisk to the backup location specified by the user.
-          # check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
-          if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
-            copy_file "$disk" "$backup_location/$vm/$new_disk" "$rsync_dry_run_option" "sparse" "$rsync_only"
-
-            # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
-            touch -d "now" "$backup_location/$vm/$new_disk"
-
-            # run compare function. compare will not run if compare_files is disabled.
-            run_compare "$disk" "$backup_location/$vm/$new_disk" "vdisk"
-
-          else
-
-            # check to see if an existing backup was already copied. if so, use rsync. if not, use cp.
-            if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
-              copy_file "$disk" "$backup_location/$vm/$timestamp$new_disk" "$rsync_dry_run_option" "sparse" "$rsync_only"
-
-              # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
-              touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
-
-            else
-
-              # use rsync because delta_sync was enabled.
-              copy_file "$disk" "$backup_location/$vm/$timestamp$new_disk" "$rsync_dry_run_option" "inplace" "$rsync_only"
-
-              # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
-              touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
-            fi
-
-            # run compare function. compare will not run if compare_files is disabled.
-            run_compare "$disk" "$backup_location/$vm/$timestamp$new_disk" "vdisk"
-          fi
-
-          # send a message to the user based on whether there was an actual copy or a dry-run.
-          if [ "$actually_copy_files" -eq 0 ]; then
-            log_message "information: dry-run backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
-
-          else
-
-            log_message "information: backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
-          fi
-
-          # check to see if snapshot was created.
-          if [[ "$snapshot_succeeded" = true ]]; then
-
-            # verify vm is still running before attempting to commit changes from snapshot.
-            if [ "$vm_state" == "running" ]; then
-
-              # commit changes from snapshot.
-              virsh blockcommit "$vm" "${vdisk_specs[$disk]}" --active --wait --verbose --pivot
-
-              # wait 5 seconds.
-              sleep 5
-              log_message "information: commited changes from snapshot for $disk on $vm."
-
-              # see if snapshot still exists.
-              if [[ -f "$disk_directory/$snap_name" ]]; then
-
-                # if it does, forcibly remove it.
-                rm -fv "$disk_directory/$snap_name"
-                log_message "information: forcibly removed snapshot $disk_directory/$snap_name for $vm."
-              fi
-
-            else
-
-              log_message "warning: snapshot performed for $vm, but vm state is $vm_state. cannot commit changes from snapshot." "script skipping $vm" "warning"
             fi
           fi
         fi
@@ -1461,10 +1471,13 @@ me=$(basename "$0")
 
     if [ "$actually_copy_files" -eq 0 ]; then
 
-      log_message "warning: actually_copy_files flag is $actually_copy_files. no files will be copied if using rsync only mode."
+      log_message "warning: actually_copy_files flag is $actually_copy_files. no files will be copied. setting rsync_only to 1."
 
       # create a variable which tells rsync to do a dry-run.
       rsync_dry_run_option="n"
+
+      # set rsync_only variable to 1 so that dry run will work.
+	    rsync_only="1"
 
     elif [ "$actually_copy_files" -eq 1 ]; then
 

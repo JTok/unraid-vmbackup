@@ -5,6 +5,3 @@
 #  - test case where vdisk1 does not exist.
 #  - option to revert back to traditional backup if snapshot fails.
 #  - plugin/script for enabling and disabling snapshots on specific vm for testing?
-
-## To-Test List ##
-#  - verify that rsync dry run options work when dry run is disabled.
