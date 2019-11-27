@@ -1,12 +1,27 @@
 ## Change Log ##
 
+# v1.2.0 - 2019/11/27
+# Starring Tom Hanks
+#
+#  - major rewrites to make script smaller, slightly more efficient, and more modular.
+#  - added option to choose different snapshot extension.
+#  - added option to allow all vms to be backed up without having to explicitly list them.
+#  - added option to revert back to standard backup if snapshot fails.
+#  - added option to pause vms during standard backups instead of shutting down.
+#  - added support for pulling nvram extension from the config file.
+#  - fixed 'integer expression expected' error when performing regular expression integer comparisons.
+#  - fixed dry run option not working.
+#  - workaround for 'namespace warning' error when working with config file.
+#  - improved readability of log file by removing unnecessary line breaks.
+
+
 # v1.1.5 - 2019/11/21
 #  In Loving Memory of Net Neutrality
 #
 #  - fixed some errors not generating an error log file.
 #  - updated comments.
 #  - updated documentation to include important information.
-#  - reverse changelog order.
+#  - reverse change log order.
 #  - added support for more vdisk extensions by parsing them directly from the config.
 #  - added user variable (case-insensitive) for blacklisting extensions. iso included by default.
 #  - fixed issue with where files would not be removed after compressing when config files were not set to be backed up.
