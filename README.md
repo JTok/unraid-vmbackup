@@ -37,7 +37,7 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 
   - be sure to install the qemu guest agent on VMs to enable quiescence, which will improve the integrity of backups.
 
-  - the disk path in the VM config cannot be /mnt/user, but instead must be /mnt/cache/ or /mnt/diskX/.
+  - the disk path in the VM config cannot be /mnt/user, but instead must be /mnt/cache or /mnt/diskX.
 
 - Option to kill a VM that won't shutdown cleanly.
 
