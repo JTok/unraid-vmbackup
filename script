@@ -39,7 +39,7 @@ vm2
 "
 
 # list of specific vdisks to be skipped separated by a new line. use the full path.
-# NOTE: must match path in vm config file.
+# NOTE: must match path in vm config file. remember this if you change the virtual disk path to enable snapshots.
 vdisks_to_skip="
 /mnt/user/domains/vm1/vdisk2.img
 /mnt/user/domains/vm1/vdisk3.img
