@@ -6,7 +6,8 @@
 #  - major rewrites to make script more efficient and modular.
 #  - added option to choose different snapshot extension.
 #  - added option to allow all vms to be backed up without having to explicitly list them.
-#  - added option to revert back to traditional backup if snapshot fails.
+#  - added option to revert back to standard backup if snapshot fails.
+#  - added option to pause vms during standard backups instead of shutting down.
 #  - added support for pulling nvram extension from the config file.
 #  - fixed 'integer expression expected' error when performing regular expression integer comparisons.
 #  - fixed dry run option not working.

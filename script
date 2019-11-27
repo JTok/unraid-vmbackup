@@ -106,6 +106,10 @@ snapshot_extension="snap"
 # NOTE: this will act as though use_snapshots was disabled for just the vm with the failed snapshot command.
 snapshot_fallback="0"
 
+# default is 0. pause vms instead of shutting them down during standard backups.
+# WARNING: this could result in unusable backups, but I have not thoroughly tested.
+pause_vms="0"
+
 # list of vms that will be backed up WITHOUT first shutting down separated by a new line. these must also be listed in vms_to_backup.
 # NOTE: vms backed up via snapshot will not be shutdown (see use_snapshots option).
 # WARNING: using this setting can result in an unusable backup. not recommended.
@@ -833,26 +837,54 @@ only_send_error_notifications="0"
     local vm="$1"
     local vm_state="$2"
 
-    # resume the vm if it is suspended, based on testing this should be instant but will trap later if it has not resumed.
-    if [ "$vm_state" == "paused" ]; then
-      log_message "action: $vm is $vm_state. resuming."
-
-      # resume the vm.
-      virsh resume "$vm"
+    if [ "$pause_vms" -eq 1 ]; then
+      vm_desired_state="paused"
+    else
+      vm_desired_state="shut off"
     fi
+    
+    # check to see if the vm is in the desired state.
+    if [ "$vm_state" == "$vm_desired_state" ]; then
 
-    # if the vm is running try and shut it down.
-    if [ "$vm_state" == "running" ]; then
-      log_message "infomration: $vm is $vm_state. shutting down."
+      # set a flag to check later to indicate whether to backup this vm or not.
+      can_backup_vm="y"
+      log_message "information: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm."
 
-      # attempt to cleanly shutdown the vm.
-      virsh shutdown "$vm"
-      log_message "information: performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to shutdown cleanly."
+    # check to see if vm is shut off.
+    elif [ "$vm_state" == "shut off" ] && [ ! "$vm_desired_state" == "shut off" ]; then
+
+      # set a flag to check later to indicate whether to backup this vm or not.
+      can_backup_vm="y"
+      log_message "information: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm."
+
+    # if the vm is running, try to get it to the desired state.
+    elif [ "$vm_state" == "running" ] || { [ "$vm_state" == "paused" ] && [ ! "$vm_desired_state" == "paused" ]; }; then
+      log_message "infomration: $vm is $vm_state. vm desired state is $vm_desired_state."
+
+      if [ "$vm_desired_state" == "paused" ]; then
+        # attempt to pause the vm.
+        virsh suspend "$vm"
+        log_message "information: $vm is $vm_state. vm desired state is $vm_desired_state. performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to pause. "
+      
+      elif [ "$vm_desired_state" == "shut off" ]; then
+        
+        # resume the vm if it is suspended, based on testing this should be instant but will trap later if it has not resumed.
+        if [ "$vm_state" == "paused" ]; then
+          log_message "action: $vm is $vm_state. vm desired state is $vm_desired_state. resuming."
+
+          # resume the vm.
+          virsh resume "$vm"
+        fi
+
+        # attempt to cleanly shutdown the vm.
+        virsh shutdown "$vm"
+        log_message "information: performing $clean_shutdown_checks $seconds_to_wait second cycles waiting for $vm to shutdown cleanly."
+      fi
 
       # the shutdown of the vm may last a while so we are going to check periodically based on global input variables.
       for (( i=1; i<=clean_shutdown_checks; i++ ))
       do
-        log_message "information: cycle $i of $clean_shutdown_checks: waiting $seconds_to_wait seconds before checking if the vm has shutdown."
+        log_message "information: cycle $i of $clean_shutdown_checks: waiting $seconds_to_wait seconds before checking if the vm has entered the desired state."
 
         # wait x seconds based on how many seconds the user wants to wait between checks for a clean shutdown.
         sleep $seconds_to_wait
@@ -861,8 +893,8 @@ only_send_error_notifications="0"
         vm_state=$(virsh domstate "$vm")
 
         # if the vm is running decide what to do.
-        if [ "$vm_state" == "running" ]; then
-          log_message "information: $vm is $vm_state."
+        if [ ! "$vm_state" == "$vm_desired_state" ]; then
+          log_message "information: $vm is $vm_state. vm desired state is $vm_desired_state."
 
           # if we have already exhausted our wait time set by the script variables then its time to do something else.
           if [ $i = "$clean_shutdown_checks" ] ; then
@@ -882,14 +914,14 @@ only_send_error_notifications="0"
 
                 # set a flag to check later to indicate whether to backup this vm or not.
                 can_backup_vm="y"
-                log_message "information: $vm is $vm_state. can_backup_vm set to $can_backup_vm."
+                log_message "information: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm."
                 break
 
               else
 
                 # set a flag to check later to indicate whether to backup this vm or not.
                 can_backup_vm="n"
-                log_message "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
+                log_message "failure: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
               fi
 
             # if the user doesn't want to force a shutdown then there is nothing more to do so i cannot backup the vm.
@@ -897,16 +929,16 @@ only_send_error_notifications="0"
 
               # set a flag to check later to indicate whether to backup this vm or not.
               can_backup_vm="n"
-              log_message "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
+              log_message "failure: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
             fi
           fi
 
         # if the vm is shut off then go onto backing it up.
-        elif [ "$vm_state" == "shut off" ]; then
+        elif [ "$vm_state" == "$vm_desired_state" ]; then
 
           # set a flag to check later to indicate whether to backup this vm or not.
           can_backup_vm="y"
-          log_message "information: $vm is $vm_state. can_backup_vm set to $can_backup_vm."
+          log_message "information: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm."
           break
 
         # if the vm is in a state that is not explicitly defined then do nothing as it is unknown how to handle it.
@@ -914,30 +946,23 @@ only_send_error_notifications="0"
 
           # set a flag to check later to indicate whether to backup this vm or not.
           can_backup_vm="n"
-          log_message "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
+          log_message "failure: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
         fi
       done
-
-    # if the vm is shut off then go straight onto backing it up.
-    elif [ "$vm_state" == "shut off" ]; then
-
-      # set a flag to check later to indicate whether to backup this vm or not.
-      can_backup_vm="y"
-      log_message "information: $vm is $vm_state. can_backup_vm set to $can_backup_vm."
 
     # if the vm is suspended then something went wrong with the attempt to recover it earlier so do not attempt to backup.
     elif [ "$vm_state" == "suspended" ]; then
 
       # set a flag to check later to indicate whether to backup this vm or not.
       can_backup_vm="n"
-      log_message "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
+      log_message "failure: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
 
     # if the vm is in a state that has not been explicitly defined then do nothing as it is unknown how to handle it.
     else
 
       # set a flag to check later to indicate whether to backup this vm or not.
       can_backup_vm="n"
-      log_message "failure: $vm is $vm_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
+      log_message "failure: $vm is $vm_state. vm desired state is $vm_desired_state. can_backup_vm set to $can_backup_vm." "$vm backup failed" "alert"
     fi
   }
 
@@ -1424,6 +1449,48 @@ only_send_error_notifications="0"
   else
 
     log_message "information: use_snapshots disabled, not adding snapshot_extension to vdisk_extensions_to_skip."
+
+  fi
+
+  # check to see if snapshots should fallback to standard backups. if yes, continue. if no, continue. if input invalid, exit.
+  if [[ "$snapshot_fallback" =~ ^(0|1)$ ]]; then
+
+    if [ "$snapshot_fallback" -eq 0 ]; then
+
+      log_message "information: snapshot_fallback is $snapshot_fallback. snapshots will fallback to standard backups."
+
+    elif [ "$snapshot_fallback" -eq 1 ]; then
+
+      log_message "information: snapshot_fallback is $snapshot_fallback. snapshots will not fallback to standard backups."
+
+    fi
+
+  else
+
+    log_message "failure: snapshot_fallback is $snapshot_fallback. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." "script failed" "alert"
+
+    exit 1
+
+  fi
+
+  # check to see if vms should be paused instead of shutdown. if yes, continue. if no, continue. if input invalid, exit.
+  if [[ "$pause_vms" =~ ^(0|1)$ ]]; then
+
+    if [ "$pause_vms" -eq 0 ]; then
+
+      log_message "information: pause_vms is $pause_vms. vms will be shutdown for standard backups."
+
+    elif [ "$pause_vms" -eq 1 ]; then
+
+      log_message "information: pause_vms is $pause_vms. vms will be paused for standard backups."
+
+    fi
+
+  else
+
+    log_message "failure: pause_vms is $pause_vms. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." "script failed" "alert"
+
+    exit 1
 
   fi
 
@@ -2041,8 +2108,22 @@ only_send_error_notifications="0"
           
           log_message "information: vm_state is $vm_state. vm_original_state is $vm_original_state. starting $vm." "script starting $vm" "normal"
 
-          # start vm
-          virsh start "$vm"
+          if [ "$vm_state" == "paused" ]; then
+
+            # resume vm
+            virsh resume "$vm"
+
+          elif [ "$vm_state" == "shut off" ]; then
+
+            # start vm
+            virsh start "$vm"
+
+          else
+          
+            # there was an error
+            log_message "warning: vm_state is $vm_state. vm_original_state is $vm_original_state. unable to start $vm." "script cannot start $vm" "warning"
+
+          fi
 
         else
 
@@ -2058,8 +2139,22 @@ only_send_error_notifications="0"
 
         log_message "information: vm_state is $vm_state. start_vm_after_backup is $start_vm_after_backup. starting $vm." "script starting $vm" "normal"
 
-        # try and start the vm.
-        virsh start "$vm"
+        if [ "$vm_state" == "paused" ]; then
+
+            # resume vm
+            virsh resume "$vm"
+
+          elif [ "$vm_state" == "shut off" ]; then
+
+            # start vm
+            virsh start "$vm"
+
+          else
+          
+            # there was an error
+            log_message "warning: vm_state is $vm_state. vm_original_state is $vm_original_state. unable to start $vm." "script cannot start $vm" "warning"
+
+          fi
 
       fi
 
@@ -2264,10 +2359,24 @@ only_send_error_notifications="0"
       # start the vm based on previous state.
       if [ "$vm_original_state" == "running" ]; then
         
-        log_message "information: vm_original_state is $vm_original_state. starting $vm." "script re-starting $vm" "normal"
+        log_message "information: vm_state is $vm_state. vm_original_state is $vm_original_state. starting $vm." "script starting $vm" "normal"
 
-        # start vm
-        virsh start "$vm"
+        if [ "$vm_state" == "paused" ]; then
+
+            # resume vm
+            virsh resume "$vm"
+
+          elif [ "$vm_state" == "shut off" ]; then
+
+            # start vm
+            virsh start "$vm"
+
+          else
+          
+            # there was an error
+            log_message "warning: vm_state is $vm_state. vm_original_state is $vm_original_state. unable to start $vm." "script cannot start $vm" "warning"
+
+          fi
 
       else
 
@@ -2281,10 +2390,24 @@ only_send_error_notifications="0"
       # if start_vm_after_failure is set to 1 then start the vm but dont check that it has been successful.
       if [ "$start_vm_after_failure" -eq 1 ]; then
 
-        log_message "information: start_vm_after_failure is $start_vm_after_failure starting $vm." "script re-starting $vm" "normal"
+        log_message "information: start_vm_after_failure is $start_vm_after_failure. vm_state is $vm_state. vm_original_state is $vm_original_state. starting $vm." "script starting $vm" "normal"
 
-        # try and start the vm.
-        virsh start "$vm"
+        if [ "$vm_state" == "paused" ]; then
+
+            # resume vm
+            virsh resume "$vm"
+
+          elif [ "$vm_state" == "shut off" ]; then
+
+            # start vm
+            virsh start "$vm"
+
+          else
+          
+            # there was an error
+            log_message "warning: vm_state is $vm_state. vm_original_state is $vm_original_state. unable to start $vm." "script cannot start $vm" "warning"
+
+          fi
 
       fi
 
