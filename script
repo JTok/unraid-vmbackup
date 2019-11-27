@@ -1835,7 +1835,24 @@ only_send_error_notifications="0"
 
 #### code execution start ####
 
-  log_message "information: started attempt to backup $vms_to_backup to $backup_location"
+  # create comma separated list of vms to backup for log file.
+  for vm_to_backup in $vms_to_backup
+  
+  do
+
+    if [[ -z "$vms_to_backup_list" ]]; then
+
+      vms_to_backup_list="$vm_to_backup"
+
+    else
+
+      vms_to_backup_list="$vms_to_backup_list, $vm_to_backup"
+
+    fi
+
+  done
+  
+  log_message "information: started attempt to backup $vms_to_backup_list to $backup_location"
 
   # set this to force the for loop to split on new lines and not spaces.
   IFS=$'\n'
@@ -1935,7 +1952,7 @@ only_send_error_notifications="0"
     # sed isn't an ideal way to edit xml files, but few options are available on unraid.
     # this only edits a temporary file that is removed at the end of the script.
     sed -i 's|vmtemplate xmlns="unraid"|vmtemplate xmlns="http://unraid.net/xmlns"|g' "$vm.xml"
-    
+
     # create a directory named after the vm within backup_location to store the backup files.
     if [ ! -d "$backup_location/$vm" ] ; then
 
@@ -2447,7 +2464,13 @@ only_send_error_notifications="0"
 
             if [[ -n "$deleted_files" ]]; then
         
-              log_message "information: $deleted_files." "script removing xmls" "normal"
+              for deleted_file in $deleted_files
+
+              do
+
+                log_message "information: $deleted_file." "script removing xmls" "normal"
+
+              done
 
             else
 
@@ -2472,7 +2495,13 @@ only_send_error_notifications="0"
 
             if [[ -n "$deleted_files" ]]; then
         
-              log_message "information: $deleted_files." "script removing nvrams" "normal"
+              for deleted_file in $deleted_files
+
+              do
+
+                log_message "information: $deleted_file." "script removing nvrams" "normal"
+
+              done
 
             else
 
@@ -2503,7 +2532,13 @@ only_send_error_notifications="0"
 
               if [[ -n "$deleted_files" ]]; then
           
-                log_message "information: $deleted_files." "script removing vdisks" "normal"
+                for deleted_file in $deleted_files
+
+                do
+
+                  log_message "information: $deleted_file." "script removing vdisks" "normal"
+
+                done
 
               else
 
@@ -2530,7 +2565,13 @@ only_send_error_notifications="0"
 
             if [[ -n "$deleted_files" ]]; then
         
-              log_message "information: $deleted_files." "script removing tarballs" "normal"
+              for deleted_file in $deleted_files
+
+              do
+
+                log_message "information: $deleted_file." "script removing tarballs" "normal"
+
+              done
 
             else
 
@@ -2569,7 +2610,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
         
-          log_message "information: $deleted_files." "script removing xmls" "normal"
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file." "script removing xmls" "normal"
+
+          done
 
         else
 
@@ -2583,7 +2630,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
         
-          log_message "information: $deleted_files."
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file."
+
+          done
 
         else
 
@@ -2600,7 +2653,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
         
-          log_message "information: $deleted_files." "script removing nvrams" "normal"
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file." "script removing nvrams" "normal"
+
+          done
 
         else
 
@@ -2614,7 +2673,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
         
-          log_message "information: $deleted_files."
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file."
+
+          done
 
         else
 
@@ -2702,7 +2767,13 @@ only_send_error_notifications="0"
 
           if [[ -n "$deleted_files" ]]; then
           
-            log_message "information: $deleted_files." "script removing vdisks" "normal"
+            for deleted_file in $deleted_files
+
+            do
+
+              log_message "information: $deleted_file." "script removing vdisks" "normal"
+
+            done
 
           else
 
@@ -2716,7 +2787,13 @@ only_send_error_notifications="0"
 
           if [[ -n "$deleted_files" ]]; then
           
-            log_message "information: $deleted_files."
+            for deleted_file in $deleted_files
+
+            do
+
+              log_message "information: $deleted_file."
+
+            done
 
           else
 
@@ -2735,7 +2812,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
         
-          log_message "information: $deleted_files." "script removing tarballs" "normal"
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file." "script removing tarballs" "normal"
+
+          done
 
         else
 
@@ -2749,7 +2832,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
         
-          log_message "information: $deleted_files."
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file."
+
+          done
 
         else
 
@@ -2766,7 +2855,7 @@ only_send_error_notifications="0"
 
   done
 
-  log_message "information: finished attempt to backup $vms_to_backup to $backup_location."
+  log_message "information: finished attempt to backup $vms_to_backup_list to $backup_location."
 
 
   # check to see if reconstruct write was enabled by this script. if so, disable and continue.
@@ -2799,7 +2888,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
 
-          log_message "information: $deleted_files." "script removing logs" "normal"
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file." "script removing logs" "normal"
+
+          done
 
         else
 
@@ -2813,7 +2908,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
 
-          log_message "information: $deleted_files."
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file."
+
+          done
 
         else
 
@@ -2848,7 +2949,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
 
-          log_message "information: $deleted_files." "script removing error logs" "normal"
+          for deleted_file in $deleted_files
+
+          do
+
+              log_message "information: $deleted_file." "script removing error logs" "normal"
+
+          done
 
         else
 
@@ -2862,7 +2969,13 @@ only_send_error_notifications="0"
 
         if [[ -n "$deleted_files" ]]; then
 
-          log_message "information: $deleted_files."
+          for deleted_file in $deleted_files
+
+          do
+
+            log_message "information: $deleted_file."
+
+          done
 
         else
 

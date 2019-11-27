@@ -12,6 +12,8 @@
 #  - fixed 'integer expression expected' error when performing regular expression integer comparisons.
 #  - fixed dry run option not working.
 #  - workaround for 'namespace warning' error when working with config file.
+#  - improved readability of log file by removing unnecessary line breaks.
+
 
 # v1.1.5 - 2019/11/21
 #  In Loving Memory of Net Neutrality
