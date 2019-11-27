@@ -435,7 +435,7 @@ only_send_error_notifications="0"
 
         # check to see if vdisk extension is the same as the snapshot extension. if it is, error and skip the vm.
         if [ "$disk_extension" == "$snapshot_extension" ]; then
-          log_message "failure: extension for $disk on $vm is the same as the snapshot extension $snapshot_extension. disk will always be skipped. please change snapshot_extension or vdisk extension." "cannot backup vdisk on $vm" "alert"
+          log_message "failure: extension for $disk on $vm is the same as the snapshot extension $snapshot_extension. disk will always be skipped. this usually means that the disk path in the config was not changed from /mnt/user. if disk path is correct, then try changing snapshot_extension or vdisk extension." "cannot backup vdisk on $vm" "alert"
         fi
 
         # check to see if vdisk should be skipped by extension.
