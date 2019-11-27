@@ -3,7 +3,7 @@
 # v1.2.0 - TESTING
 # Starring Tom Hanks
 #
-#  - major rewrites to make script more efficient and modular.
+#  - major rewrites to make script smaller, slightly more efficient, and more modular.
 #  - added option to choose different snapshot extension.
 #  - added option to allow all vms to be backed up without having to explicitly list them.
 #  - added option to revert back to standard backup if snapshot fails.
