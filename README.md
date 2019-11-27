@@ -19,6 +19,8 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 
   - be sure to set enabled = "1" to ensure that the script will run.
 
+  - to enable the script while parity check is running change line 4 from "noParity=true" to "noParity=false"
+
 - Choose a schedule in the CA User Scripts plugin.
 
 ### Script options
@@ -32,7 +34,9 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 - List specific vdisk extensions to skip, if any (iso listed by default).
 
 - Option to use snapshots to backup VMs without shutting down.
+
   - be sure to install the qemu guest agent on VMs to enable quiescence, which will improve the integrity of backups.
+
   - the disk path in the VM config cannot be /mnt/user, but instead must be /mnt/cache/ or /mnt/diskX/.
 
 - Option to kill a VM that won't shutdown cleanly.
