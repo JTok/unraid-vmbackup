@@ -25,13 +25,15 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 
 - Choose a backup location.
 
-- List VMs to be backed up.
+- Choose to backup all VMs, or list specific VMs to be backed up.
 
 - List specific vdisks to skip, if any.
 
 - List specific vdisk extensions to skip, if any (iso listed by default).
 
-- Option to use snapshots to backup VMs without shutting down. Changes will need to be made to VM config before enabling.
+- Option to use snapshots to backup VMs without shutting down.
+  - be sure to install the qemu guest agent on VMs to enable quiescence, which will improve the integrity of backups.
+  - the disk path in the VM config cannot be /mnt/user, but instead must be /mnt/cache/ or /mnt/diskX/.
 
 - Option to kill a VM that won't shutdown cleanly.
 
@@ -74,6 +76,12 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 - Option to disable delta syncs.
 
 - Option to only use rsync.
+
+- Advanced: Choose the extension used for snapshots.
+
+- Advanced: Option to fallback to standard backups if snapshot creation fails.
+
+- Advanced: Option to pause VMs instead of shutting them down during standard backups. Could result in unusable backups.
 
 - Advanced: Option to keep specific VMs running during backup. Not recommended.
 
