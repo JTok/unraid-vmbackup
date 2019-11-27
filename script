@@ -268,6 +268,7 @@ only_send_error_notifications="0"
 	      local is_error="0"
     		;;
       esac
+
     if [ "$description" ] && [ "$importance" ]; then
       local enable_detailed_notifications="1"
     else
@@ -327,6 +328,7 @@ only_send_error_notifications="0"
     if [ "$compare_files" -eq 1 ]; then
       if ! cmp -s "$source" "$destination"; then
         log_message "warning: $file_type file for $vm is different than source file. retrying backup." "$(basename "$source") compare failed" "warning"
+
         case "$file_type" in
           "config")
             copy_file "$source" "$destination" "$rsync_dry_run_option" "standard" "$rsync_only"
@@ -357,7 +359,6 @@ only_send_error_notifications="0"
 
         log_message "information: $file_type file for $vm matches source file. moving on."
       fi
-
     fi
   }
 
@@ -552,7 +553,6 @@ only_send_error_notifications="0"
                 # set quiesce to disabled.
                 quiesce=""
                 log_message "information: qemu agent not found. disabling quiesce on snapshot."
-
               fi
 
               # create snapshot command.
@@ -1323,7 +1323,7 @@ only_send_error_notifications="0"
 
       log_message "warning: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is a long time to keep your backups."
 
-    elif [ "$number_of_days_to_keep_backups" -ge 5 ] && [ "$number_of_days_to_keep_backups" -le 180 ]; then
+    elif [ "$number_of_days_to_keep_backups" -ge 7 ] && [ "$number_of_days_to_keep_backups" -le 180 ]; then
 
       log_message "information: number_of_days_to_keep_backups is $number_of_days_to_keep_backups. this is probably a sufficient number of days to keep your backups."
 
@@ -2417,20 +2417,20 @@ only_send_error_notifications="0"
 
         if [ "$vm_state" == "paused" ]; then
 
-            # resume vm
-            virsh resume "$vm"
+          # resume vm
+          virsh resume "$vm"
 
-          elif [ "$vm_state" == "shut off" ]; then
+        elif [ "$vm_state" == "shut off" ]; then
 
-            # start vm
-            virsh start "$vm"
+          # start vm
+          virsh start "$vm"
 
-          else
-          
-            # there was an error
-            log_message "warning: vm_state is $vm_state. vm_original_state is $vm_original_state. unable to start $vm." "script cannot start $vm" "warning"
+        else
+        
+          # there was an error
+          log_message "warning: vm_state is $vm_state. vm_original_state is $vm_original_state. unable to start $vm." "script cannot start $vm" "warning"
 
-          fi
+        fi
 
       fi
 
