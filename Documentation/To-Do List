@@ -6,5 +6,3 @@
 #  - plugin/script for enabling and disabling snapshots on specific vm for testing?
 #  - ignore/change number of backups to keep and number of days to keep backups warnings
 #  - clean up logging to file. i.e. remove unnecessary line breaks and repeated messages.
-#  - fix namespace warning : xmlns when parsing xml.
-

@@ -671,6 +671,7 @@ only_send_error_notifications="0"
               fi
 
             elif [ "$use_snapshots" -eq 1 ] && [ ! "$vm_state" == "running" ]; then
+              snapshot_using_traditional_backup=true
               log_message "information: unable to perform snapshot for disk $disk on $vm. falling back to traditional backup. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}."
             fi
 
@@ -717,7 +718,7 @@ only_send_error_notifications="0"
             fi
 
             # check to see if snapshot was created.
-            if [[ "$snapshot_succeeded" = true ]]; then
+            if [[ "$snapshot_succeeded" = true ]] && [[ ! "$snapshot_using_traditional_backup" = true ]]; then
 
               # verify vm is still running before attempting to commit changes from snapshot.
               if [ "$vm_state" == "running" ]; then
@@ -1930,6 +1931,11 @@ only_send_error_notifications="0"
     # dump the vm config locally.
     virsh dumpxml "$vm" > "$vm.xml"
 
+    # replace xmlns value with absolute URI to avoid namespace warning.
+    # sed isn't an ideal way to edit xml files, but few options are available on unraid.
+    # this only edits a temporary file that is removed at the end of the script.
+    sed -i 's|vmtemplate xmlns="unraid"|vmtemplate xmlns="http://unraid.net/xmlns"|g' "$vm.xml"
+    
     # create a directory named after the vm within backup_location to store the backup files.
     if [ ! -d "$backup_location/$vm" ] ; then
 
