@@ -3,7 +3,7 @@
 #arrayStarted=true
 #noParity=true
 
-# v1.2.0 - 2019/11/27
+# v1.2.1 - Development
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -1942,10 +1942,12 @@ only_send_error_notifications="0"
 
     # see if a config file exists for the vm already and remove it.
     if [ -f "$vm.xml" ]; then
+      log_message "information: removing old local $vm.xml."
       rm -fv "$vm.xml"
     fi
 
     # dump the vm config locally.
+    log_message "information: creating local $vm.xml to work with during backup."
     virsh dumpxml "$vm" > "$vm.xml"
 
     # replace xmlns value with absolute URI to avoid namespace warning.
