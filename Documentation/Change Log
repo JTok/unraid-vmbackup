@@ -1,9 +1,14 @@
 ## Change Log ##
 
-# v1.2.1 - Development
+# v1.2.2 - Development
 # Sam Vimes
 #
 #  - added logging to local vm config dump actions.
+
+# v1.2.1 - 2019/12/11
+# Moth-man is Real
+#
+#  - fixed bug that could cause snapshots not to be removed in specific situations.
 
 # v1.2.0 - 2019/11/27
 # Starring Tom Hanks
