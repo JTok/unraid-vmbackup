@@ -527,6 +527,7 @@ only_send_error_notifications="0"
 
             # check to see if snapshots should be used, and if the vm is running.
             if [ "$use_snapshots" -eq 1 ] && [ "$vm_state" == "running" ]; then
+              snapshot_using_traditional_backup=false
               log_message "information: able to perform snapshot for disk $disk on $vm. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}"
 
               # set variable for qemu agent is installed.
