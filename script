@@ -2265,7 +2265,7 @@ only_send_error_notifications="0"
 
             # remove any existing list of files to be backup and create a blank backup file list.
             if [[ -f "$backup_file_list" ]]; then
-                rm "$backup_file_list"
+                rm -fv "$backup_file_list"
             fi
 
             log_message "information: creating blank backup file list at $backup_file_list."
@@ -2299,7 +2299,7 @@ only_send_error_notifications="0"
 
             # remove backup file list.
             log_message "information: removing backup file list at $backup_file_list."
-            rm "$backup_file_list"
+            rm -fv "$backup_file_list"
 
             log_message "information: finished creating new tarball."
             
@@ -2329,7 +2329,7 @@ only_send_error_notifications="0"
 
           # remove any existing list of files to be backup and create a blank file.
           if [[ -f "$backup_file_list" ]]; then
-            rm "$backup_file_list"
+            rm -fv "$backup_file_list"
           fi
 
           log_message "information: creating blank backup file list at $backup_file_list."
@@ -2363,7 +2363,7 @@ only_send_error_notifications="0"
 
           # remove backup file list.
           log_message "information: removing backup file list at $backup_file_list."
-          rm "$backup_file_list"
+          rm -fv "$backup_file_list"
 
           log_message "information: finished creating new tarball."
 
@@ -2854,7 +2854,8 @@ only_send_error_notifications="0"
     fi
 
     # delete the working copy of the config.
-    rm "$vm.xml"
+    log_message "information: removing local $vm.xml."
+    rm -fv "$vm.xml"
 
   done
 

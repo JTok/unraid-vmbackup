@@ -4,6 +4,7 @@
 # Sam Vimes
 #
 #  - added logging to local vm config dump actions.
+#  - fixed rm commands missing -fv options.
 
 # v1.2.1 - 2019/12/11
 # Moth-man is Real
