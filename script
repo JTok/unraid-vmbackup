@@ -489,7 +489,7 @@ only_send_error_notifications="0"
             shopt -u extglob
 
             # check to see if a backup already exists for this vdisk and make a copy of it before shutting down the guest.
-            if [ -f "$newest_vdisk_file" ]; then
+            if [[ -f "$newest_vdisk_file" ]]; then
               log_message "information: copy of backup of $newest_vdisk_file vdisk to $backup_location/$vm/$timestamp$new_disk starting." "script starting copy $vm backup" "normal"
 
               # call function copy_files to copy existing backup
@@ -1013,12 +1013,12 @@ only_send_error_notifications="0"
   backup_location=${backup_location%/}
 
   # check to see if the backup_location specified by the user exists. if yes, continue if no, exit. if exists check if writable, if yes continue, if not exit. if input invalid, exit.
-  if [ -d "$backup_location" ]; then
+  if [[ -d "$backup_location" ]]; then
 
     notification_message "information: backup_location is $backup_location. this location exists. continuing."
 
     # if backup_location does exist check to see if the backup_location is writable.
-    if [ -w "$backup_location" ]; then
+    if [[ -w "$backup_location" ]]; then
 
       notification_message "information: backup_location is $backup_location. this location is writable. continuing."
 
@@ -1086,12 +1086,12 @@ only_send_error_notifications="0"
 
 
   # check to see if the log_file_subfolder specified by the user exists. if yes, continue if no, exit. if exists check if writable, if yes continue, if not exit. if input invalid, exit.
-  if [ -d "$backup_location/$log_file_subfolder" ]; then
+  if [[ -d "$backup_location/$log_file_subfolder" ]]; then
 
     notification_message "information: log_file_subfolder is $backup_location/$log_file_subfolder. this location exists. continuing."
 
     # if log_file_subfolder does exist check to see if the log_file_subfolder is writable.
-    if [ -w "$backup_location/$log_file_subfolder" ]; then
+    if [[ -w "$backup_location/$log_file_subfolder" ]]; then
 
       notification_message "information: log_file_subfolder is $backup_location/$log_file_subfolder. this location is writable. continuing."
 
@@ -1942,7 +1942,7 @@ only_send_error_notifications="0"
     fi
 
     # see if a config file exists for the vm already and remove it.
-    if [ -f "$vm.xml" ]; then
+    if [[ -f "$vm.xml" ]]; then
       log_message "information: removing old local $vm.xml."
       rm -fv "$vm.xml"
     fi
