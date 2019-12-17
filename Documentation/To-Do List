@@ -6,4 +6,3 @@
 #  - plugin/script for enabling and disabling snapshots on specific vm for testing?
 #  - ignore/change number of backups to keep and number of days to keep backups warnings
 #  - check to see if VM is running off existing snapshot file (possibly by using backingStore in config).
-#  - have backup all vms switch change functionality of vm list from inclusion to exclusion.

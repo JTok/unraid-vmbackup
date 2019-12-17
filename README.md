@@ -29,6 +29,8 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 
 - Choose to backup all VMs, or list specific VMs to be backed up.
 
+  - If backup all VMs is enabled, the list of VMs to backup is used as an exclusion list instead.
+
 - List specific vdisks to skip, if any.
 
 - List specific vdisk extensions to skip, if any (iso listed by default).

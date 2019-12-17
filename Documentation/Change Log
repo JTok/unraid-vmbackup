@@ -4,6 +4,7 @@
 # Sam Vimes
 #
 #  - added logging to local vm config dump actions.
+#  - added ability to use vms_to_backup as an exclusion list when backup_all_vms is enabled.
 #  - fixed rm commands missing -fv options.
 
 # v1.2.1 - 2019/12/11
