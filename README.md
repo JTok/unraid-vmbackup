@@ -1,6 +1,6 @@
 # unraid-vmbackup
 
-v1.2.1 - 2019/12/11
+v1.2.2 - 2019/12/18
 
 Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-technology.com/forums/topic/48286-plugin-ca-user-scripts/ "CA User Scripts") for more information.
 
@@ -28,6 +28,8 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 - Choose a backup location.
 
 - Choose to backup all VMs, or list specific VMs to be backed up.
+
+  - If backup all VMs is enabled, the list of VMs to backup is used as an exclusion list instead.
 
 - List specific vdisks to skip, if any.
 
