@@ -2,6 +2,8 @@
 
 v1.2.3 - 2019/12/14
 
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=NG5HGW4Q3CZU4&source=url "Donations are appreciated")
+
 *A beta version for an unRAID plugin is located [here](https://github.com/JTok/unraid.vmbackup "VM Backup plugin") and in Community Applications.*
 
 Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-technology.com/forums/topic/48286-plugin-ca-user-scripts/ "CA User Scripts") for more information.
