@@ -1,6 +1,8 @@
 # unraid-vmbackup
 
-v1.2.2 - 2019/12/18
+v1.2.3 - 2019/12/14
+
+*A beta version for an unRAID plugin is located [here](https://github.com/JTok/unraid.vmbackup "VM Backup plugin") and in Community Applications.*
 
 Script for use with unRAID's CA User Scripts plugin. See [here](https://lime-technology.com/forums/topic/48286-plugin-ca-user-scripts/ "CA User Scripts") for more information.
 
