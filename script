@@ -282,8 +282,8 @@ only_send_error_notifications="0"
         local is_error="1"
         ;;
       *)
-	      local is_error="0"
-    		;;
+        local is_error="0"
+        ;;
       esac
 
     if [ "$description" ] && [ "$importance" ]; then
@@ -294,7 +294,7 @@ only_send_error_notifications="0"
     local force_notification="$4"
 
     # add the message to the log file.
-    echo "$(date '+%Y-%m-%d %H:%M') $message" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $message" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
     # check to see if the message is an error message.
     if [ "$is_error" -eq 1 ]; then
@@ -304,14 +304,14 @@ only_send_error_notifications="0"
 
       # send a notification if they are enabled.
       if [ "$send_notifications" -eq 1 ] || [ "$force_notification" == "force_notification" ]; then
-        /usr/local/emhttp/plugins/dynamix/scripts/notify -s "unRAID VM Backup script" -d "$description" -i "$importance" -m "$(date '+%Y-%m-%d %H:%M') $message"
+        /usr/local/emhttp/plugins/dynamix/scripts/notify -s "unRAID VM Backup script" -d "$description" -i "$importance" -m "$(date '+%Y-%m-%d %H:%M:%S') $message"
       fi
     fi
 
     # send a detailed notification if it is enabled and if they should be used.
     if [ "$enable_detailed_notifications" -eq 1 ] && [ "$detailed_notifications" -eq 1 ]; then
       if [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-        /usr/local/emhttp/plugins/dynamix/scripts/notify -s "unRAID VM Backup script" -d "$description" -i "$importance" -m "$(date '+%Y-%m-%d %H:%M') $message"
+        /usr/local/emhttp/plugins/dynamix/scripts/notify -s "unRAID VM Backup script" -d "$description" -i "$importance" -m "$(date '+%Y-%m-%d %H:%M:%S') $message"
       fi
     fi
   }
@@ -325,11 +325,11 @@ only_send_error_notifications="0"
     local importance="$3"
 
     # show the message in the log.
-    echo "$(date '+%Y-%m-%d %H:%M') $message"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $message"
 
     # send message notification.
     if [[ -n "$description" ]] && [[ -n "$importance" ]]; then
-      /usr/local/emhttp/plugins/dynamix/scripts/notify -s "unRAID VM Backup script" -d "$description" -i "$importance" -m "$(date '+%Y-%m-%d %H:%M') $message"
+      /usr/local/emhttp/plugins/dynamix/scripts/notify -s "unRAID VM Backup script" -d "$description" -i "$importance" -m "$(date '+%Y-%m-%d %H:%M:%S') $message"
     fi
   }
 
@@ -791,7 +791,7 @@ only_send_error_notifications="0"
       # check to see if find command is empty.
       if [ ${#vdisk_extensions_find_cmd[@]} -eq 0 ]; then
 
-        # build intial find command.
+        # build initial find command.
         vdisk_extensions_find_cmd=(find)
         vdisk_extensions_find_cmd+=("$search_directory")
         vdisk_extensions_find_cmd+=(-type f)
@@ -1063,7 +1063,7 @@ only_send_error_notifications="0"
 
 
   # create timestamp variable for rolling backups.
-  timestamp="$(date '+%Y%m%d_%H%M')""_"
+  timestamp="$(date '+%Y%m%d_%H%M%S')""_"
 
   # check to see if backups should have timestamp. if yes, continue. if no, continue. if input invalid, exit.
   if [[ "$timestamp_files" =~ ^(0|1)$ ]]; then
@@ -2864,7 +2864,7 @@ only_send_error_notifications="0"
         deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
         if [[ -n "$deleted_files" ]]; then
-        
+
           for deleted_file in $deleted_files
 
           do
@@ -2884,7 +2884,7 @@ only_send_error_notifications="0"
         deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
 
         if [[ -n "$deleted_files" ]]; then
-        
+
           for deleted_file in $deleted_files
 
           do
@@ -2925,7 +2925,7 @@ only_send_error_notifications="0"
   if [ "$keep_log_file" -eq 1 ]; then
 
     if [ "$number_of_log_files_to_keep" -eq 0 ]; then
-    
+
       log_message "information: number of logs to keep set to infinite."
 
     else
@@ -2986,7 +2986,7 @@ only_send_error_notifications="0"
   if [ "$keep_error_log_file" -eq 1 ]; then
 
     if [ "$number_of_error_log_files_to_keep" -eq 0 ]; then
-    
+
       log_message "information: number of error logs to keep set to infinite."
 
     else
@@ -3016,7 +3016,7 @@ only_send_error_notifications="0"
           log_message "information: did not find any error log files to remove." "script removing error logs" "normal"
 
         fi
-      
+
       else
 
         deleted_files=$(find "$backup_location/$log_file_subfolder"*unraid-vmbackup_error.log -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$error_log_files_plus_1 | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
@@ -3063,8 +3063,8 @@ only_send_error_notifications="0"
   if [ "$keep_log_file" -eq 0 ]; then
 
     if [ "$errors" -eq 1 ] && [ "$keep_error_log_file" -eq 1 ]; then
-    
-      echo "$(date '+%Y-%m-%d %H:%M') warning: removing log file." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
+
+      echo "$(date '+%Y-%m-%d %H:%M:%S') warning: removing log file." | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
 
       rm -fv "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
@@ -3106,7 +3106,7 @@ only_send_error_notifications="0"
 
   if [ "$errors" -eq 1 ] && [ "$keep_error_log_file" -eq 1 ]; then
 
-    echo "$(date '+%Y-%m-%d %H:%M') Stop logging to error log file."  | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') Stop logging to error log file."  | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup_error.log"
 
   fi
 
@@ -3115,11 +3115,11 @@ only_send_error_notifications="0"
 
     if [ "$errors" -eq 1 ]; then
 
-      /usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error" -s "unRAID VM Backup script" -d "script finished with errors" -i "alert" -m "$(date '+%Y-%m-%d %H:%M') warning: unRAID VM Backup script finished with errors. See log files in $backup_location/$log_file_subfolder for details."
+      /usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_error" -s "unRAID VM Backup script" -d "script finished with errors" -i "alert" -m "$(date '+%Y-%m-%d %H:%M:%S') warning: unRAID VM Backup script finished with errors. See log files in $backup_location/$log_file_subfolder for details."
 
     elif [ "$only_send_error_notifications" -eq 0 ]; then
 
-      /usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_finished" -s "unRAID VM Backup script" -d "script finished" -i "normal" -m "$(date '+%Y-%m-%d %H:%M') information: unRAID VM Backup script finished. See log files in $backup_location/$log_file_subfolder for details."
+      /usr/local/emhttp/plugins/dynamix/scripts/notify -e "unraid-vmbackup_finished" -s "unRAID VM Backup script" -d "script finished" -i "normal" -m "$(date '+%Y-%m-%d %H:%M:%S') information: unRAID VM Backup script finished. See log files in $backup_location/$log_file_subfolder for details."
 
     fi
 
