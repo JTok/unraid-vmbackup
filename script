@@ -787,6 +787,9 @@ only_send_error_notifications="0"
     # find each vdisk extension and use it to build a find command.
     for extension in "${vdisk_extensions[@]}"
     do
+      if [ "$inline_zstd_compress" -eq 1 ]; then
+        extension+=".zst"
+      fi
 
       # check to see if find command is empty.
       if [ ${#vdisk_extensions_find_cmd[@]} -eq 0 ]; then
@@ -853,6 +856,50 @@ only_send_error_notifications="0"
 
     # add delete command to remove command.
     remove_old_files_cmd+=(-delete)
+  }
+
+  # remove old files
+  remove_old_files () {
+
+    # assign arguments to local variables for readability.
+    local -n _find_cmd=$1
+    local _type="$2"
+
+    # create variable equal to number_of_days_to_keep_backups plus one to make sure that there are files younger than the cutoff date.
+    local _days_plus_one=$((number_of_days_to_keep_backups + 1))
+    local _days_to_mins=$((24*60))
+
+    if [[ -n $("${_find_cmd[@]}" -mmin -$((_days_plus_one*_days_to_mins))) ]]; then
+      local _deleted_files=$("${_find_cmd[@]}" -mmin +$((number_of_days_to_keep_backups*_days_to_mins)) -delete -print)
+    fi
+
+    if [[ -n "$_deleted_files" ]]; then
+      for _deleted_file in $_deleted_files
+      do
+        log_message "information: $_deleted_file $_type file." "script removing $_type file" "normal"
+      done
+    else
+      log_message "information: did not find any $_type files to remove." "script removing $_type file" "normal"
+    fi
+  }
+
+  # remove over limit files
+  remove_over_limit_files () {
+
+    # assign arguments to local variables for readability.
+    local -n _find_cmd=$1
+    local _number_of_files_to_keep="$2"
+    local _type="$3"
+
+    local _deleted_files=$("${_find_cmd[@]}" -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$((_number_of_files_to_keep + 1)) | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+    if [[ -n "$_deleted_files" ]]; then
+      for _deleted_file in $_deleted_files
+      do
+        log_message "information: $_deleted_file $_type file." "script removing $_type file" "normal"
+      done
+    else
+      log_message "information: did not find any $_type files to remove." "script removing $_type file" "normal"
+    fi
   }
 
   # prepare vm for backup.
@@ -2499,147 +2546,30 @@ only_send_error_notifications="0"
 
       log_message "information: cleaning out backups older than $number_of_days_to_keep_backups days in location ONLY if newer files exist in $backup_location/$vm/" "script removing old backups" "normal"
 
-      # create variable equal to number_of_days_to_keep_backups plus one to make sure that there are files younger than the cutoff date.
-      days_plus_one=$((number_of_days_to_keep_backups + 1))
 
-      for j in $backup_location/$vm/
-
-      do
-
-        # remove old config files if backup_xml is 1.
-        if [ "$backup_xml" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.xml' \) -mmin -$((days_plus_one*24*60))) ]]; then
-
-          if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-            deleted_files=$(find "$j" -type f \( -name '*.xml' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
-
-            if [[ -n "$deleted_files" ]]; then
-
-              for deleted_file in $deleted_files
-
-              do
-
-                log_message "information: $deleted_file." "script removing xmls" "normal"
-
-              done
-
-            else
-
-              log_message "information: did not find any config files to remove." "script removing xmls" "normal"
-
-            fi
-
-          else
-
-            find "$j" -type f \( -name '*.xml' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
-
-          fi
-
-        fi
-
-        # remove old nvram files if backup_nvram is 1.
-        if [ "$backup_nvram" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.'"$nvram_extension" \) -mmin -$((days_plus_one*24*60))) ]]; then
-
-          if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-            deleted_files=$(find "$j" -type f \( -name '*.'"$nvram_extension" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
-
-            if [[ -n "$deleted_files" ]]; then
-
-              for deleted_file in $deleted_files
-
-              do
-
-                log_message "information: $deleted_file." "script removing nvrams" "normal"
-
-              done
-
-            else
-
-              log_message "information: did not find any nvram files to remove." "script removing nvrams" "normal"
-
-            fi
-
-          else
-
-            find "$j" -type f \( -name '*.'"$nvram_extension" \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
-
-          fi
-
-        fi
-
-        # remove old images if backup_vdisks is 1.
-        if [ "$backup_vdisks" -eq 1 ]; then
-
-          # build vdisk_extensions_find_cmd.
-          build_vdisk_extensions_find_cmd "$j"
-
-          # remove old images.
-          if [[ -n $("${vdisk_extensions_find_cmd[@]}" -mmin -$((days_plus_one*24*60))) ]]; then
-
-            if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-              deleted_files=$("${vdisk_extensions_find_cmd[@]}" -mmin +$((number_of_days_to_keep_backups*14*60)) -delete -print)
-
-              if [[ -n "$deleted_files" ]]; then
-
-                for deleted_file in $deleted_files
-
-                do
-
-                  log_message "information: $deleted_file." "script removing vdisks" "normal"
-
-                done
-
-              else
-
-                log_message "information: did not find any image files to remove." "script removing vdisks" "normal"
-
-              fi
-
-            else
-
-              "${vdisk_extensions_find_cmd[@]}" -mmin +$((number_of_days_to_keep_backups*14*60)) -delete
-
-            fi
-
-          fi
-
-        fi
-
-        # TODO... add similar section for removal of old .zst archives
-        # remove old tarballs if compress_backups is 1.
-        if [ "$compress_backups" -eq 1 ] && [[ -n $(find "$j" -type f \( -name '*.tar.gz' \) -mmin -$((days_plus_one*24*60))) ]]; then
-
-          if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-            deleted_files=$(find "$j" -type f \( -name '*.tar.gz' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete -print)
-
-            if [[ -n "$deleted_files" ]]; then
-
-              for deleted_file in $deleted_files
-
-              do
-
-                log_message "information: $deleted_file." "script removing tarballs" "normal"
-
-              done
-
-            else
-
-              log_message "information: did not find any compressed files to remove." "script removing tarballs" "normal"
-
-            fi
-
-          else
-
-            find "$j" -type f \( -name '*.tar.gz' \) -mmin +$((number_of_days_to_keep_backups*24*60)) -delete
-
-          fi
-
-        fi
-
-      done
+      # remove old config files if backup_xml is 1.
+      if [ "$backup_xml" -eq 1 ]; then
+        find_cmd=(find "$backup_location/$vm/" -type f -name '*.xml')
+        remove_old_files find_cmd "config"
+      fi
+
+      # remove old nvram files if backup_nvram is 1.
+      if [ "$backup_nvram" -eq 1 ]; then
+        find_cmd=(find "$backup_location/$vm/" -type f -name '*.'"$nvram_extension")
+        remove_old_files find_cmd "nvram"
+      fi
+
+      # remove old vdisk image files (including inline zstd compressed ones) if backup_vdisks is 1.
+      if [ "$backup_vdisks" -eq 1 ]; then
+        build_vdisk_extensions_find_cmd "$backup_location/$vm/"
+        remove_old_files vdisk_extensions_find_cmd "vdisk image"
+      fi
+
+      # remove old tarballs if compress_backups is 1.
+      if [ "$compress_backups" -eq 1 ]; then
+        find_cmd=(find "$backup_location/$vm/" -type f -name '*.tar.gz')
+        remove_old_files find_cmd "tarball"
+      fi
 
     fi
 
@@ -2652,93 +2582,16 @@ only_send_error_notifications="0"
 
       log_message "information: cleaning out backups over $number_of_backups_to_keep in location $backup_location/$vm/" "script removing old backups" "normal"
 
-      # create variable equal to number_of_backups_to_keep plus one to make sure that the correct number of files are kept.
-      backups_plus_one=$((number_of_backups_to_keep + 1))
-
       # remove config files that are over the limit if backup_xml is 1.
-      if [ "$backup_xml" -eq 1 ] && [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-        deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-        if [[ -n "$deleted_files" ]]; then
-
-          for deleted_file in $deleted_files
-
-          do
-
-            log_message "information: $deleted_file." "script removing xmls" "normal"
-
-          done
-
-        else
-
-          log_message "information: did not find any config files to remove." "script removing xmls" "normal"
-
-        fi
-
-      elif [ "$backup_xml" -eq 1 ]; then
-
-        deleted_files=$(find "$backup_location/$vm/"*.xml -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-        if [[ -n "$deleted_files" ]]; then
-
-          for deleted_file in $deleted_files
-
-          do
-
-            log_message "information: $deleted_file."
-
-          done
-
-        else
-
-          log_message "information: did not find any config files to remove."
-
-        fi
-
+      if [ "$backup_xml" -eq 1 ]; then
+        find_cmd=(find "$backup_location/$vm/" -type f -name '*.xml')
+        remove_over_limit_files find_cmd "$number_of_backups_to_keep" "config"
       fi
 
       # remove nvram files that are over the limit if backup_nvram is 1.
-      if [ "$backup_nvram" -eq 1 ] && [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-        deleted_files=$(find "$backup_location/$vm/"*."$nvram_extension" -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-        if [[ -n "$deleted_files" ]]; then
-
-          for deleted_file in $deleted_files
-
-          do
-
-            log_message "information: $deleted_file." "script removing nvrams" "normal"
-
-          done
-
-        else
-
-          log_message "information: did not find any nvram files to remove." "script removing nvrams" "normal"
-
-        fi
-
-      elif [ "$backup_nvram" -eq 1 ]; then
-
-        deleted_files=$(find "$backup_location/$vm/"*."$nvram_extension" -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-        if [[ -n "$deleted_files" ]]; then
-
-          for deleted_file in $deleted_files
-
-          do
-
-            log_message "information: $deleted_file."
-
-          done
-
-        else
-
-          log_message "information: did not find any nvram files to remove."
-
-        fi
-
+      if [ "$backup_nvram" -eq 1 ]; then
+        find_cmd=(find "$backup_location/$vm/" -type f -name '*.'"$nvram_extension")
+        remove_over_limit_files find_cmd "$number_of_backups_to_keep" "nvram"
       fi
 
       # remove image files that are over the limit if backup_vdisks is 1.
@@ -2749,156 +2602,54 @@ only_send_error_notifications="0"
 
         # find each vdisk extension and use it to build a regular expression to get a vdisk's trailing number.
         for extension in "${vdisk_extensions[@]}"
-
         do
+          if [ "$inline_zstd_compress" -eq 1 ]; then
+	      extension+=".zst"
+	    fi
 
           # check to see if regular expression is empty.
           if [[ -z "$vdisknumberextregex" ]]; then
-
             # build intial regular expression.
             vdisknumberextregex='[0-9]+\.('
             vdisknumberextregex="${vdisknumberextregex}$extension"
-
           else
-
             # add additional extensions to regular expression.
             vdisknumberextregex="${vdisknumberextregex}|$extension"
-
           fi
-
         done
 
         # put closing parenthesis on regular expression.
         vdisknumberextregex="${vdisknumberextregex})"
-
         vdisknumberonlyregex="[0-9]+"
 
         # get number of vdisks
         for imagefilename in "$backup_location/$vm/"*
-
         do
-
           # get highest number from vdisk count
           if [[ $imagefilename =~ $vdisknumberextregex ]]; then
-
             imagefilenamenumberext=${BASH_REMATCH[0]}
-
             if [[ $imagefilenamenumberext =~ $vdisknumberonlyregex ]]; then
-
               vdisk_numberonly=${BASH_REMATCH[0]}
-
             fi
-
           fi
-
           if [[ "$numberofvdisks" =~ ^[0-9]+$ ]] && [[ "$vdisk_numberonly" =~ ^[0-9]+$ ]]; then
-
             if [ "$numberofvdisks" -lt "$vdisk_numberonly" ]; then
-
               numberofvdisks="$vdisk_numberonly"
-
             fi
-
           fi
-
         done
 
-        # create variable equal to number_of_backups_to_keep, times the number of vdisks, plus one; to make sure that the correct number of files are kept.
-        vdiskbackups_plus_one=$(((number_of_backups_to_keep * numberofvdisks) + 1))
+        # create variable equal to number_of_backups_to_keep, times the number of vdisks, to make sure that the correct number of files are kept.
+        number_of_files_to_keep=$((number_of_backups_to_keep * numberofvdisks))
 
-        # build vdisk_extensions_find_cmd.
         build_vdisk_extensions_find_cmd "$backup_location/$vm/"
-
-        # add printf to find command.
-        vdisk_extensions_find_cmd+=(-printf '%T@\t%p\n')
-
-        # remove image files that are over the limit.
-        if [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-          deleted_files=$("${vdisk_extensions_find_cmd[@]}" | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-          if [[ -n "$deleted_files" ]]; then
-
-            for deleted_file in $deleted_files
-
-            do
-
-              log_message "information: $deleted_file." "script removing vdisks" "normal"
-
-            done
-
-          else
-
-            log_message "information: did not find any image files to remove." "script removing vdisks" "normal"
-
-          fi
-
-        else
-
-          deleted_files=$("${vdisk_extensions_find_cmd[@]}" | sort -t $'\t' -gr | tail -n +$vdiskbackups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-          if [[ -n "$deleted_files" ]]; then
-
-            for deleted_file in $deleted_files
-
-            do
-
-              log_message "information: $deleted_file."
-
-            done
-
-          else
-
-            log_message "information: did not find any image files to remove."
-
-          fi
-
-        fi
-
+        remove_over_limit_files vdisk_extensions_find_cmd "$number_of_files_to_keep" "vdisk image"
       fi
 
-      # TODO... add similar section for removal of old .zst archives
-      # remove tar.gz files that are over the limit if compress_backups is 1.
-      if [ "$compress_backups" -eq 1 ] && [ "$detailed_notifications" -eq 1 ] && [ "$send_notifications" -eq 1 ] && [ "$only_send_error_notifications" -eq 0 ]; then
-
-        deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-        if [[ -n "$deleted_files" ]]; then
-
-          for deleted_file in $deleted_files
-
-          do
-
-            log_message "information: $deleted_file." "script removing tarballs" "normal"
-
-          done
-
-        else
-
-          log_message "information: did not find any compressed files to remove." "script removing tarballs" "normal"
-
-        fi
-
-      elif [ "$compress_backups" -eq 1 ]; then
-
-        deleted_files=$(find "$backup_location/$vm/"*.tar.gz -type f -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$backups_plus_one | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
-
-        if [[ -n "$deleted_files" ]]; then
-
-          for deleted_file in $deleted_files
-
-          do
-
-            log_message "information: $deleted_file."
-
-          done
-
-        else
-
-          log_message "information: did not find any compressed files to remove."
-
-        fi
-
+      # remove tarball files that are over the limit if compress_backups is 1.
+      if [ "$compress_backups" -eq 1 ]; then
+        find_cmd=(find "$backup_location/$vm/" -type f -name '*.tar.gz')
+        remove_over_limit_files find_cmd "$number_of_backups_to_keep" "tarball"
       fi
 
     fi
