@@ -2613,31 +2613,27 @@ only_send_error_notifications="0"
         # initialize variables to find number of vdisks
         numberofvdisks="1"
 
-        local _addnl_ext
-        if [ "$inline_zstd_compress" -eq 1 ]; then
-          _addnl_ext=".zst"
-        fi
-
         # find each vdisk extension and use it to build a regular expression to get a vdisk's trailing number.
         for extension in "${vdisk_extensions[@]}"
         do
 
-          # check to see if regular expression is empty.
+          # if empty, build initial regular expression, otherwise append to it
           if [[ -z "$vdisknumberextregex" ]]; then
-            # build intial regular expression.
-            vdisknumberextregex='[0-9]+\.('
-            vdisknumberextregex="${vdisknumberextregex}$extension$_addnl_ext"
+            vdisknumberextregex='[0-9]+\.($extension'
           else
-            # add additional extensions to regular expression.
-            vdisknumberextregex="${vdisknumberextregex}|$extension$_addnl_ext"
+            vdisknumberextregex+="|$extension"
+          fi
+
+          if [ "$inline_zstd_compress" -eq 1 ]; then
+            vdisknumberextregex+=".zst"
           fi
         done
 
         # put closing parenthesis on regular expression.
-        vdisknumberextregex="${vdisknumberextregex})"
-        vdisknumberonlyregex="[0-9]+"
+        vdisknumberextregex+=")"
 
         # get number of vdisks
+        vdisknumberonlyregex="[0-9]+"
         for imagefilename in "$backup_location/$vm/"*
         do
           # get highest number from vdisk count
