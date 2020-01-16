@@ -3,7 +3,7 @@
 #arrayStarted=true
 #noParity=true
 
-# v1.2.3 - 2019/12/23
+# v1.3.0 - 2020/01/15
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -81,6 +81,7 @@ zstd_level="3"
 zstd_threads="2"
 
 # default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
+# this is the legacy setting for compression.
 # WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all config, nvram, and vdisk images in the backup directory into ONE tarball.
 compress_backups="0"
 
@@ -2619,7 +2620,8 @@ only_send_error_notifications="0"
 
           # if empty, build initial regular expression, otherwise append to it
           if [[ -z "$vdisknumberextregex" ]]; then
-            vdisknumberextregex='[0-9]+\.($extension'
+            vdisknumberextregex='[0-9]+\.('
+            vdisknumberextregex+="$extension"
           else
             vdisknumberextregex+="|$extension"
           fi
@@ -2659,6 +2661,7 @@ only_send_error_notifications="0"
 
       # remove tarball files that are over the limit if compress_backups is 1.
       if [ "$compress_backups" -eq 1 ]; then
+        # shellcheck disable=SC2034
         find_cmd=(find "$backup_location/$vm/" -type f -name '*.tar.gz')
         remove_over_limit_files find_cmd "$number_of_backups_to_keep" "tarball"
       fi

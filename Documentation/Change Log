@@ -1,5 +1,10 @@
 ## Change Log ##
 
+# v1.3.0 - 2020/01/15
+# Better than standard
+#
+# - added option to use zstd inline compression.
+
 # v1.2.3 - 2019/12/24
 # Leftovers
 #

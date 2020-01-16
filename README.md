@@ -1,6 +1,6 @@
 # unraid-vmbackup
 
-v1.2.3 - 2019/12/14
+v1.3.0 - 2020/01/15
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=NG5HGW4Q3CZU4&source=url "Donations are appreciated")
 
@@ -80,6 +80,14 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 #### Additional options
 
 - Option to compress backups.
+
+  - legacy option for tar.gz files.
+
+  - support for zstandard.
+
+    - Option to set compression level.
+
+    - Option to choose number of threads.
 
 - Option to timestamp backups.
 
