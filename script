@@ -77,8 +77,8 @@ inline_zstd_compress="0"
 # default is 3. higher values may produce smaller archives but are slower and use more CPU.
 zstd_level="3"
 
-# default is 0 (auto detect). set this to the desired number of compression worker threads
-zstd_threads="0"
+# default is 2. set this to the desired number of compression worker threads, or 0 to auto detect (i.e. use all)
+zstd_threads="2"
 
 # default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
 # WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all config, nvram, and vdisk images in the backup directory into ONE tarball.
@@ -693,52 +693,40 @@ only_send_error_notifications="0"
               log_message "information: unable to perform snapshot for disk $disk on $vm. falling back to traditional backup. use_snapshots is $use_snapshots. vm_state is $vm_state. vdisk_type is ${vdisk_types[$disk]}."
             fi
 
+            local dest_disk="$backup_location/$vm/$new_disk"
+
+            if [ "$timestamp_files" -eq 1 ] || [ "$number_of_backups_to_keep" -ne 1 ]; then
+              # if timestamps are enabled or more than one backup is being kept, add a timestamp to the destination filename.
+              dest_disk="$backup_location/$vm/$timestamp$new_disk"
+            fi
+
             # copy or pretend to copy the vdisk to the backup location specified by the user.
-            # check if only one non-timestamped backup is being kept. if so, perform cp -f without a timestamp. if not, continue as normal.
-            if [ "$timestamp_files" -eq 0 ]  && [ "$number_of_backups_to_keep" -eq 1 ]; then
-              copy_file "$disk" "$backup_location/$vm/$new_disk" "$rsync_dry_run_option" "sparse" "$rsync_only"
-
-              # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
-              touch -d "now" "$backup_location/$vm/$new_disk"
-
-              # run compare function. compare will not run if compare_files is disabled.
-              run_compare "$disk" "$backup_location/$vm/$new_disk" "vdisk"
-
-            elif [ "$inline_zstd_compress" -eq 1 ]; then
-              copy_file "$disk" "$backup_location/$vm/$timestamp$new_disk.zst" "$rsync_dry_run_option" "inline_zstd_compress" "$rsync_only"
-
-              # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
-              touch -d "now" "$backup_location/$vm/$timestamp$new_disk.zst"
-
+            if [ "$inline_zstd_compress" -eq 1 ]; then
+              # if inline_zstd_compress is enabled, add ".zst" to the destination filename, and don't run the comparison.
+              dest_disk+=".zst"
+              copy_file "$disk" "$dest_disk" "$rsync_dry_run_option" "inline_zstd_compress" "$rsync_only"
             else
 
-              # check to see if an existing backup was already copied. if so, use rsync. if not, use cp.
-              if [ ! -f "$backup_location/$vm/$timestamp$new_disk" ]; then
-                copy_file "$disk" "$backup_location/$vm/$timestamp$new_disk" "$rsync_dry_run_option" "sparse" "$rsync_only"
-
-                # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
-                touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
-
+              if [ -f "$disk_dest" ]; then
+                # if there is an existing backup, use rsync to just copy the changes (i.e. delta_sync).
+                copy_file "$disk" "$dest_disk" "$rsync_dry_run_option" "inplace" "$rsync_only"
               else
-
-                # use rsync because delta_sync was enabled.
-                copy_file "$disk" "$backup_location/$vm/$timestamp$new_disk" "$rsync_dry_run_option" "inplace" "$rsync_only"
-
-                # make sure copy has current date/time for modified attribute so that removing old backups by date will work.
-                touch -d "now" "$backup_location/$vm/$timestamp$new_disk"
+                # otherwise, copy the whole file (with sparse support)
+                copy_file "$disk" "$dest_disk" "$rsync_dry_run_option" "sparse" "$rsync_only"
               fi
 
               # run compare function. compare will not run if compare_files is disabled.
-              run_compare "$disk" "$backup_location/$vm/$timestamp$new_disk" "vdisk"
+              run_compare "$disk" "$disk_dest" "vdisk"
             fi
+
+            # make sure the copy has the current date/time for the modified attribute so that removing old backups by date will work.
+            touch -d "now" "$dest_disk"
 
             # send a message to the user based on whether there was an actual copy or a dry-run.
             if [ "$actually_copy_files" -eq 0 ]; then
-              log_message "information: dry-run backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
-
+              log_message "information: dry-run backup of $disk vdisk to $dest_disk complete."
             else
-
-              log_message "information: backup of $new_disk vdisk to $backup_location/$vm/$timestamp$new_disk complete."
+              log_message "information: backup of $disk vdisk to $dest_disk complete."
             fi
 
             # check to see if snapshot was created.
@@ -784,12 +772,14 @@ only_send_error_notifications="0"
     # initialize vdisk_extensions_find_cmd as empty array.
     vdisk_extensions_find_cmd=()
 
+    local _addnl_ext
+    if [ "$inline_zstd_compress" -eq 1 ]; then
+      _addnl_ext=".zst"
+    fi
+
     # find each vdisk extension and use it to build a find command.
     for extension in "${vdisk_extensions[@]}"
     do
-      if [ "$inline_zstd_compress" -eq 1 ]; then
-        extension+=".zst"
-      fi
 
       # check to see if find command is empty.
       if [ ${#vdisk_extensions_find_cmd[@]} -eq 0 ]; then
@@ -799,12 +789,12 @@ only_send_error_notifications="0"
         vdisk_extensions_find_cmd+=("$search_directory")
         vdisk_extensions_find_cmd+=(-type f)
         vdisk_extensions_find_cmd+=(\()
-        vdisk_extensions_find_cmd+=(-name '*.'"$extension")
+        vdisk_extensions_find_cmd+=(-name '*.'"$extension$_addnl_ext")
 
       else
 
         # add additional extensions to find command.
-        vdisk_extensions_find_cmd+=(-or -name '*.'"$extension")
+        vdisk_extensions_find_cmd+=(-or -name '*.'"$extension$_addnl_ext")
       fi
     done
 
@@ -869,10 +859,10 @@ only_send_error_notifications="0"
     local _days_plus_one=$((number_of_days_to_keep_backups + 1))
     local _days_to_mins=$((24*60))
 
+    local _deleted_files
     if [[ -n $("${_find_cmd[@]}" -mmin -$((_days_plus_one*_days_to_mins))) ]]; then
-      local _deleted_files=$("${_find_cmd[@]}" -mmin +$((number_of_days_to_keep_backups*_days_to_mins)) -delete -print)
+      _deleted_files=$("${_find_cmd[@]}" -mmin +$((number_of_days_to_keep_backups*_days_to_mins)) -delete -print)
     fi
-
     if [[ -n "$_deleted_files" ]]; then
       for _deleted_file in $_deleted_files
       do
@@ -891,7 +881,8 @@ only_send_error_notifications="0"
     local _number_of_files_to_keep="$2"
     local _type="$3"
 
-    local _deleted_files=$("${_find_cmd[@]}" -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$((_number_of_files_to_keep + 1)) | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
+    local _deleted_files
+    _deleted_files=$("${_find_cmd[@]}" -printf '%T@\t%p\n' | sort -t $'\t' -gr | tail -n +$((_number_of_files_to_keep + 1)) | cut -d $'\t' -f 2- | xargs -d '\n' -r rm -fv --)
     if [[ -n "$_deleted_files" ]]; then
       for _deleted_file in $_deleted_files
       do
@@ -1110,7 +1101,7 @@ only_send_error_notifications="0"
 
 
   # create timestamp variable for rolling backups.
-  timestamp="$(date '+%Y%m%d_%H%M%S')""_"
+  timestamp="$(date '+%Y%m%d_%H%M')""_"
 
   # check to see if backups should have timestamp. if yes, continue. if no, continue. if input invalid, exit.
   if [[ "$timestamp_files" =~ ^(0|1)$ ]]; then
@@ -2600,21 +2591,23 @@ only_send_error_notifications="0"
         # initialize variables to find number of vdisks
         numberofvdisks="1"
 
+        local _addnl_ext
+        if [ "$inline_zstd_compress" -eq 1 ]; then
+          _addnl_ext=".zst"
+        fi
+
         # find each vdisk extension and use it to build a regular expression to get a vdisk's trailing number.
         for extension in "${vdisk_extensions[@]}"
         do
-          if [ "$inline_zstd_compress" -eq 1 ]; then
-	      extension+=".zst"
-	    fi
 
           # check to see if regular expression is empty.
           if [[ -z "$vdisknumberextregex" ]]; then
             # build intial regular expression.
             vdisknumberextregex='[0-9]+\.('
-            vdisknumberextregex="${vdisknumberextregex}$extension"
+            vdisknumberextregex="${vdisknumberextregex}$extension$_addnl_ext"
           else
             # add additional extensions to regular expression.
-            vdisknumberextregex="${vdisknumberextregex}|$extension"
+            vdisknumberextregex="${vdisknumberextregex}|$extension$_addnl_ext"
           fi
         done
 
