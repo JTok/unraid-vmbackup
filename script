@@ -3,7 +3,7 @@
 #arrayStarted=true
 #noParity=true
 
-# v1.2.3 - 2019/12/23
+# v1.3.0 - 2020/01/15
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -81,6 +81,7 @@ zstd_level="3"
 zstd_threads="2"
 
 # default is 0. set this to 1 if you would like to compress backups. This can add a significant amount of time to the backup process. uses tar.gz for sparse file compatibility.
+# this is the legacy setting for compression.
 # WARNING: do not turn on if you already have uncompressed backups. You will need to move or delete uncompressed backups before using. this will compress all config, nvram, and vdisk images in the backup directory into ONE tarball.
 compress_backups="0"
 
