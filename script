@@ -772,14 +772,14 @@ only_send_error_notifications="0"
     # initialize vdisk_extensions_find_cmd as empty array.
     vdisk_extensions_find_cmd=()
 
-    local _addnl_ext
-    if [ "$inline_zstd_compress" -eq 1 ]; then
-      _addnl_ext=".zst"
-    fi
-
     # find each vdisk extension and use it to build a find command.
     for extension in "${vdisk_extensions[@]}"
     do
+
+      local _ext="$extension"
+      if [ "$inline_zstd_compress" -eq 1 ]; then
+        _ext+=".zst"
+      fi
 
       # check to see if find command is empty.
       if [ ${#vdisk_extensions_find_cmd[@]} -eq 0 ]; then
@@ -789,12 +789,12 @@ only_send_error_notifications="0"
         vdisk_extensions_find_cmd+=("$search_directory")
         vdisk_extensions_find_cmd+=(-type f)
         vdisk_extensions_find_cmd+=(\()
-        vdisk_extensions_find_cmd+=(-name '*.'"$extension$_addnl_ext")
+        vdisk_extensions_find_cmd+=(-name '*.'"$_ext")
 
       else
 
         # add additional extensions to find command.
-        vdisk_extensions_find_cmd+=(-or -name '*.'"$extension$_addnl_ext")
+        vdisk_extensions_find_cmd+=(-or -name '*.'"$_ext")
       fi
     done
 
