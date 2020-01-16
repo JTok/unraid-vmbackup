@@ -707,7 +707,7 @@ only_send_error_notifications="0"
               copy_file "$disk" "$dest_disk" "$rsync_dry_run_option" "inline_zstd_compress" "$rsync_only"
             else
 
-              if [ -f "$disk_dest" ]; then
+              if [ -f "$dest_disk" ]; then
                 # if there is an existing backup, use rsync to just copy the changes (i.e. delta_sync).
                 copy_file "$disk" "$dest_disk" "$rsync_dry_run_option" "inplace" "$rsync_only"
               else
@@ -716,7 +716,7 @@ only_send_error_notifications="0"
               fi
 
               # run compare function. compare will not run if compare_files is disabled.
-              run_compare "$disk" "$disk_dest" "vdisk"
+              run_compare "$disk" "$dest_disk" "vdisk"
             fi
 
             # make sure the copy has the current date/time for the modified attribute so that removing old backups by date will work.
