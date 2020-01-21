@@ -1,6 +1,6 @@
 # unraid-vmbackup
 
-v1.3.0 - 2020/01/15
+v1.3.1 - 2020/01/21
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=NG5HGW4Q3CZU4&source=url "Donations are appreciated")
 
@@ -67,13 +67,17 @@ i.e. VM1 cannot have /mnt/diskX/vdisk1.img and /mnt/users/domains/VM1/vdisk1.img
 
 - Choose the number of log files to keep.
 
+- Option to create a VM specific log in each VM's sub-folder.
+
+  - Uses the same retention policy as the VM's backups.
+
 - Option to log messages through unRAID notification system.
 
   - Option to only receive error notifications
 
   - Option to receive detailed notifications.
 
-    - sends notifications when vm backups are started and stopped.
+    - sends notifications when VM backups are started and stopped.
 
     - sends notifications when old backups are deleted.
 
