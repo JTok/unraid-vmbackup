@@ -3,7 +3,7 @@
 #arrayStarted=true
 #noParity=true
 
-# v1.3.0 - 2020/01/15
+# v1.3.1 - 2020/01/21
 
 #### DISCLAIMER ####
 # Use at your own risk. This is a work-in-progress and provided as is.
@@ -100,6 +100,9 @@ number_of_log_files_to_keep="1"
 
 # default is "logs". set to "" to put in root of backups folder. set to "logs/<subfolder>" to keep logs separate if running multiple versions of this script.
 log_file_subfolder="logs"
+
+# default is 0. create a vm specific log in each vm's subfolder using the same retention policy as the vm's backups.
+enable_vm_log_file="0"
 
 # default is 1. set to 0 to prevent notification system from being used. Script failures that occur before logging can start, and before this variable is validated will still be sent.
 send_notifications="1"
@@ -297,8 +300,8 @@ only_send_error_notifications="0"
     # add the message to the main log file.
     echo "$(date '+%Y-%m-%d %H:%M:%S') $message" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
 
-    # add the message to the vm specific log file.
-    if [ -n "$vm_log_file" ]; then
+    # add the message to the vm specific log file if enabled.
+    if [[ -n "$vm_log_file" ]] && [ "$enable_vm_log_file" -eq 1 ]; then
       echo "$(date '+%Y-%m-%d %H:%M:%S') $message" >> "$vm_log_file"
     fi
 
@@ -1286,6 +1289,27 @@ only_send_error_notifications="0"
 
   fi
 
+  # check to see if vm specific log files are enabled. if yes, continue. if no, continue. if input invalid, exit.
+  if [[ "$enable_vm_log_file" =~ ^(0|1)$ ]]; then
+
+    if [ "$enable_vm_log_file" -eq 0 ]; then
+
+      log_message "information: enable_vm_log_file is $enable_vm_log_file. vm specific logs will not be created."
+
+    elif  [ "$enable_vm_log_file" -eq 1 ]; then
+
+      log_message "information: enable_vm_log_file is $enable_vm_log_file. vm specific logs will be created."
+
+    fi
+
+  else
+
+    log_message "failure: enable_vm_log_file is $enable_vm_log_file. this is not a valid format. expecting [0 = no] or [1 = yes]. exiting." "script failed" "alert"
+
+    exit 1
+
+  fi
+
   # check to see if all vms should be backed up. if yes, continue. if no, continue. if input invalid, exit.
   if [[ "$backup_all_vms" =~ ^(0|1)$ ]]; then
 
@@ -2084,7 +2108,9 @@ only_send_error_notifications="0"
 
     fi
 
-    vm_log_file="$backup_location/$vm/$timestamp""unraid-vmbackup.log"
+    if [ "$enable_vm_log_file" -eq 1 ]; then
+      vm_log_file="$backup_location/$vm/$timestamp""unraid-vmbackup.log"
+    fi
 
     # see if vdisks should be backed up, if the number of backups is more than 1, if snapshots are being used, and if delta sync is enabled.
     if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$use_snapshots" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
@@ -2671,12 +2697,12 @@ only_send_error_notifications="0"
 
       # remove tarball files that are over the limit if compress_backups is 1.
       if [ "$compress_backups" -eq 1 ]; then
-        # shellcheck disable=SC2034
         find_cmd=(find "$backup_location/$vm/" -type f -name '*.tar.gz')
         remove_over_limit_files find_cmd "$number_of_backups_to_keep" "tarball"
       fi
 
       # remove vm log files that are over the limit
+      # shellcheck disable=SC2034
       find_cmd=(find "$backup_location/$vm/" -type f -name '*unraid-vmbackup.log')
       remove_over_limit_files find_cmd "$number_of_backups_to_keep" "vm log"
 
