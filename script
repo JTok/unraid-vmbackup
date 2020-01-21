@@ -294,8 +294,13 @@ only_send_error_notifications="0"
     fi
     local force_notification="$4"
 
-    # add the message to the log file.
+    # add the message to the main log file.
     echo "$(date '+%Y-%m-%d %H:%M:%S') $message" | tee -a "$backup_location/$log_file_subfolder$timestamp""unraid-vmbackup.log"
+
+    # add the message to the vm specific log file.
+    if [ -n "$vm_log_file" ]; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S') $message" >> "$vm_log_file"
+    fi
 
     # check to see if the message is an error message.
     if [ "$is_error" -eq 1 ]; then
@@ -2079,6 +2084,7 @@ only_send_error_notifications="0"
 
     fi
 
+    vm_log_file="$backup_location/$vm/$timestamp""unraid-vmbackup.log"
 
     # see if vdisks should be backed up, if the number of backups is more than 1, if snapshots are being used, and if delta sync is enabled.
     if [ "$backup_vdisks" -eq 1 ] && [ "$number_of_backups_to_keep" -ne 1 ] && [ "$use_snapshots" -ne 1 ] && [ "$disable_delta_sync" -ne 1 ]; then
@@ -2585,6 +2591,10 @@ only_send_error_notifications="0"
         remove_old_files find_cmd "tarball"
       fi
 
+      # remove old vm log files
+      find_cmd=(find "$backup_location/$vm/" -type f -name '*unraid-vmbackup.log')
+      remove_old_files find_cmd "vm log"
+
     fi
 
     # check to see how many backups should be kept.
@@ -2666,7 +2676,13 @@ only_send_error_notifications="0"
         remove_over_limit_files find_cmd "$number_of_backups_to_keep" "tarball"
       fi
 
+      # remove vm log files that are over the limit
+      find_cmd=(find "$backup_location/$vm/" -type f -name '*unraid-vmbackup.log')
+      remove_over_limit_files find_cmd "$number_of_backups_to_keep" "vm log"
+
     fi
+
+    unset vm_log_file
 
     # delete the working copy of the config.
     log_message "information: removing local $vm.xml."
